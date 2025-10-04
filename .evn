@@ -1,0 +1,21 @@
+# .env.example
+# Copy this file to .env and update with your values
+
+# Server Configuration
+HOST=0.0.0.0
+PORT=8000
+RELOAD=false
+LOG_LEVEL=info
+
+# MCP Configuration
+#MCP_SERVER_PATH=C:\\Anuj\\AI\\MCP\\mcp-servers\\oracle_server\\oracle_server.py
+MCP_PYTHON_COMMAND=python
+
+# OpenAI Configuration (Optional)
+OPENAI_API_KEY=your-openai-api-key-here
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_TEMPERATURE=0.1
+OPENAI_MAX_TOKENS=500
+
+# CORS Configuration
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001,*
