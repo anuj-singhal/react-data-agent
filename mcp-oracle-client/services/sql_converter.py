@@ -35,12 +35,12 @@ class SQLConverter:
         sql = sql.strip().rstrip(";").strip()
         return sql
     
-    async def convert_to_sql(self, natural_language_query: str, tools: List = None) -> str:
+    async def convert_to_sql(self, natural_language_query: str, intent_dict, rag_context, tools: List = None) -> str:
         """Convert natural language to SQL query."""
         # Try LLM conversion first if available
         if self.llm:
             try:
-                sql = await self._convert_with_llm(natural_language_query, tools)
+                sql = await self._convert_with_llm(natural_language_query,intent_dict, rag_context, tools)
                 if sql and sql != "INVALID_QUERY":
                     return self.clean_sql_query(sql)
             except Exception as e:
@@ -50,7 +50,7 @@ class SQLConverter:
         sql = self._convert_with_patterns(natural_language_query)
         return self.clean_sql_query(sql)
     
-    async def _convert_with_llm(self, query: str, tools: List = None) -> str:
+    async def _convert_with_llm(self, query: str,intent_dict, rag_context, tools: List = None) -> str:
         """Convert using OpenAI LLM."""
         # Build table descriptions
         table_descriptions = self._build_table_descriptions()
@@ -59,13 +59,17 @@ class SQLConverter:
         prompt = f"""You are an Oracle SQL expert. Database schema:
 {table_descriptions}
 
+Tools Description:
 {tool_descriptions}
 
 User task: {query}
 
+Intent Detection: {str(intent_dict)}
+
 Important rules:
 - Generate a valid Oracle SELECT query
 - Use only existing tables and columns from the schema above
+- Use Intent for more clarity and the suggested_approach for more refined user task by intent 
 - Return ONLY the SQL query text
 - Do NOT include any markdown formatting like ```sql or ```
 - Do NOT include any explanations, comments, or additional text

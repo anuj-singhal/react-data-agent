@@ -1,0 +1,31 @@
+{
+  "relationships": [
+    {
+      "name": "bank_branches_to_banks",
+      "from_table": "bank_branches",
+      "from_column": "bank_id",
+      "to_table": "uae_banks_financial_data",
+      "to_column": "bank",
+      "type": "MANY_TO_ONE",
+      "description": "Each branch belongs to one bank"
+    },
+    {
+      "name": "transactions_to_banks",
+      "from_table": "bank_transactions",
+      "from_column": "bank_name",
+      "to_table": "uae_banks_financial_data",
+      "to_column": "bank",
+      "type": "MANY_TO_ONE",
+      "description": "Each transaction is associated with a bank"
+    },
+    {
+      "name": "customers_to_banks",
+      "from_table": "customers",
+      "from_column": "primary_bank",
+      "to_table": "uae_banks_financial_data",
+      "to_column": "bank",
+      "type": "MANY_TO_ONE",
+      "description": "Each customer has a primary bank"
+    }
+  ]
+}

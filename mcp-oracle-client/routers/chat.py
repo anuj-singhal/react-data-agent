@@ -8,7 +8,9 @@ from models.chat import (
     QueryConfirmationRequest,
     FollowUpRequest
 )
-from services.chat import chat_manager
+#from services.chat import chat_manager
+from services.chat.manager_with_intent import ChatManagerWithIntent
+chat_manager = ChatManagerWithIntent()
 from services.query_executor import query_executor
 
 logger = logging.getLogger(__name__)

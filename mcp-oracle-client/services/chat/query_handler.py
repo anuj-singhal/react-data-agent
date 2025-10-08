@@ -28,7 +28,7 @@ class QueryHandler:
             self.llm = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
             logger.info("OpenAI client initialized for query handling")
     
-    async def generate_query(self, message: str, session_id: str) -> ChatResponse:
+    async def generate_query(self, message: str, intent_dict, rag_context, session_id: str) -> ChatResponse:
         """
         Generate SQL query from natural language.
         
@@ -45,7 +45,7 @@ class QueryHandler:
                 await mcp_client.reconnect()
             
             # Generate SQL from natural language
-            sql_query = await sql_converter.convert_to_sql(message, mcp_client.tools)
+            sql_query = await sql_converter.convert_to_sql(message, intent_dict, rag_context, mcp_client.tools)
             sql_query = clean_sql_query(sql_query)
             
             # Create confirmation message
