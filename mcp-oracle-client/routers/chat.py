@@ -8,13 +8,52 @@ from models.chat import (
     QueryConfirmationRequest,
     FollowUpRequest
 )
+from services.rag_agent.rag_config import (
+    RAGConfig, DATA_DICTIONARY, QUERY_PATTERNS
+)
+from pathlib import Path
+from typing import Dict
+import asyncio
+
 #from services.chat import chat_manager
-from services.chat.manager_with_intent import ChatManagerWithIntent
-chat_manager = ChatManagerWithIntent()
+from services.chat.manager_with_intent_rag import ChatManagerWithIntent
+rag_config = RAGConfig()
+chat_manager = ChatManagerWithIntent(rag_config)
 from services.query_executor import query_executor
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["Chat"])
+
+def initialize_training_data(chat_manager: ChatManagerWithIntent, data_dictionary: Dict) -> None:
+    """Initialize RAG system with schema and patterns."""
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Check if already initialized
+        init_file = Path("./.rag_initialized")
+        if init_file.exists():
+            logger.info("RAG system already initialized, loading existing data")
+            asyncio.run(chat_manager.initialize_with_schema(data_dictionary))
+            return
+        
+        logger.info("Initializing RAG system with schema and patterns...")
+        
+        # Initialize with schema
+        asyncio.run(chat_manager.initialize_with_schema(data_dictionary))
+        
+        # Load query patterns
+        for pattern_name, pattern_info in QUERY_PATTERNS.items():
+            logger.info(f"Loading pattern: {pattern_name}")
+        
+        # Mark as initialized
+        init_file.touch()
+        logger.info("RAG system initialization complete")
+        
+    except Exception as e:
+        logger.error(f"Error during initialization: {e}")
+        logger.info("Continuing with limited functionality")
+
+initialize_training_data(chat_manager, DATA_DICTIONARY)
 
 @router.post("/start")
 async def start_chat():

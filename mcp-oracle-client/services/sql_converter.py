@@ -57,7 +57,7 @@ class SQLConverter:
         tool_descriptions = self._build_tool_descriptions(tools) if tools else ""
         
         prompt = f"""You are an Oracle SQL expert. Database schema:
-{table_descriptions}
+{rag_context}
 
 Tools Description:
 {tool_descriptions}
