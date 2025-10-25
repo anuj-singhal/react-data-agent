@@ -6,11 +6,11 @@ import json
 from models.chat import ChatResponse, ConversationContext
 from services.chat.manager import ChatManager
 from services.chat.intent_agent import IntentAgent, SemanticIntent
-from services.sql_converter import sql_converter
+#from services.sql_converter import sql_converter
 from services.query_executor import query_executor
 from services.mcp_client import mcp_client
-from services.rag_agent.graph_context_retriever import graph_rag_retriever
-from services.rag_agent.rag_system import RAGSystem
+# from services.rag_agent.graph_context_retriever import graph_rag_retriever
+# from services.rag_agent.rag_system import RAGSystem
 
 logger = logging.getLogger(__name__)
 
@@ -21,43 +21,13 @@ class ChatManagerWithIntent(ChatManager):
     while preserving all existing functionality.
     """
     
-    def __init__(self, rag_config):
+    def __init__(self):
         """Initialize with Intent Agent added to existing components."""
         super().__init__()
         self.intent_agent = IntentAgent()
-        self.rag_config = rag_config
         # Initialize components
-        self.rag_system = RAGSystem(
-            persist_directory=rag_config.persist_directory,
-            collection_prefix=rag_config.collection_name,
-            embedding_model=rag_config.embedding_model
-        )
         logger.info("Chat manager initialized with Intent Agent extension")
     
-    async def initialize_with_schema(self, data_dictionary: Dict[str, Dict[str, Any]]) -> None:
-        """Initialize RAG system with schema information."""
-        # Build schema graph
-        self.rag_system.build_schema_graph(data_dictionary)
-        
-        # Train with DDL and dictionary
-        for table_name, table_info in data_dictionary.items():
-            # Add to schema collection
-            doc_text = f"Table: {table_name}\n"
-            doc_text += f"Description: {table_info.get('description', '')}\n"
-            doc_text += f"Columns: {json.dumps(table_info.get('columns', {}))}\n"
-            
-            self.rag_system.collections['schema'].add(
-                documents=[doc_text],
-                metadatas=[{
-                    'table_name': table_name,
-                    'column_count': len(table_info.get('columns', {})),
-                    'has_relationships': len(table_info.get('relationships', {})) > 0
-                }],
-                ids=[f"schema_{table_name}"]
-            )
-        
-        logger.info(f"Initialized with {len(data_dictionary)} tables")
-
     async def process_message(self, session_id: str, message: str) -> ChatResponse:
         """
         Process message with optional semantic intent extraction.
@@ -95,7 +65,7 @@ class ChatManagerWithIntent(ChatManager):
         if intent == "follow_up":
             response = await self._handle_follow_up(session_id, message, context)
         elif intent == "modify_query":
-            response = await self._handle_modify_query(session_id, message, context)
+            response = await self._handle_new_query_with_intent_rag(session_id, message, context)
         elif intent == "execute_immediately":
             response = await self._handle_execute_immediately(session_id, message, context)
         else:  # new_query
@@ -127,18 +97,18 @@ class ChatManagerWithIntent(ChatManager):
         
         return response
     
-    async def _handle_new_query_with_intent_rag(self, session_id, message, context, semantic_intent):
+    async def _handle_new_query_with_intent_rag(self, session_id, message, context, semantic_intent = None):
         try:
             # Get RAG context from intent
-            rag_context = None
+            #rag_context = None
             if semantic_intent:
                 intent_dict = semantic_intent.to_dict()
                 #rag_context = await graph_rag_retriever.retrieve_context(intent_dict, k=3, depth=1)
-                rag_context = self.rag_system.get_relevant_context(message)
+                #rag_context = self.rag_system.get_relevant_context(message)
                 #logger.info(f"RAG retrieved tables: {rag_context.primary_tables}")
             
             # Continue with existing SQL generation
-            response = await self.query_handler.generate_query(message, intent_dict ,rag_context, session_id)
+            response = await self.query_handler.generate_query(message ,session_id, context)
             
             # Optional: Add context info to confirmation message
             # if response.requires_confirmation and rag_context:
@@ -167,6 +137,58 @@ class ChatManagerWithIntent(ChatManager):
             logger.error(f"RAG context failed: {e}")
             # Fallback to existing flow
             return await self._handle_new_query(session_id, message, context)
+
+    
+    async def _handle_modify_query_with_intent_rag(self, session_id, message, context):
+        try:
+            # Get RAG context from intent
+            #rag_context = None
+
+            # Continue with existing SQL generation
+            prompt_parts = []
+            rag_parts = []
+            sep = "\n\n"
+            sep_2 = " also "
+            for message in context.messages:
+                role = message.role
+                content = message.content
+                if(role == "user"):
+                    prompt_parts.append(f"{role}: {content}")
+                    rag_parts.append(content)
+
+            previous_messages = sep.join(prompt_parts)
+            rag_messages = sep_2.join(rag_parts)
+
+            response = await self.query_handler.generate_query(message, session_id, previous_messages, rag_messages)
+            
+            # Optional: Add context info to confirmation message
+            # if response.requires_confirmation and rag_context:
+            #     # Add tables being used to the message
+            #     tables_info = f"\n**Using Tables:** {', '.join(rag_context.primary_tables)}\n"
+            #     response.message = response.message.replace("```sql", f"{tables_info}\n```sql")
+            
+            #Enhance the confirmation message with intent understanding
+            # if response.requires_confirmation and semantic_intent:
+            #     intent_summary = self._build_intent_summary(semantic_intent)
+            #     if intent_summary:
+            #         # Insert intent summary before SQL
+            #         original_msg = response.message
+            #         sql_start = original_msg.find("```sql")
+            #         if sql_start > 0:
+            #             response.message = (
+            #                 original_msg[:sql_start] + 
+            #                 f"\n{intent_summary}\n\n" + 
+            #                 original_msg[sql_start:]
+            #             )
+            
+
+            return response
+            
+        except Exception as e:
+            logger.error(f"RAG context failed: {e}")
+            # Fallback to existing flow
+            return await self._handle_new_query(session_id, message, context)
+
 
     # async def _handle_new_query_with_intent(self, session_id, message, context, semantic_intent):
     #     try:

@@ -1,0 +1,524 @@
+{
+  "tables": [
+    {
+      "table_name": "BANKS",
+      "table_description": "Master table containing bank information including identification details and codes for financial institutions",
+      "columns": [
+        {
+          "column_name": "BANK_ID",
+          "data_type": "NUMBER(38,0)",
+          "description": "Unique identifier for each bank in the system",
+          "is_primary_key": true,
+          "nullable": false,
+          "sample_values": [1, 2, 3, 4, 5]
+        },
+        {
+          "column_name": "BANK_NAME",
+          "data_type": "VARCHAR2(26)",
+          "description": "Official registered name of the bank",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["Mashreq", "ADCB", "DIB", "ENBD", "FAB"]
+        },
+        {
+          "column_name": "BANK_CODE",
+          "data_type": "VARCHAR2(26)",
+          "description": "Short code or abbreviation used to identify the bank in transactions and reports",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["MSQ", "ADCB", "DIB", "ENBD", "FAB"]
+        },
+        {
+          "column_name": "ESTABLISHED_DATE",
+          "data_type": "DATE",
+          "description": "Date when the bank was established",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["1967-01-01", "1985-05-15", "1975-03-12", "1963-10-14", "1968-04-28"]
+        },
+        {
+          "column_name": "HEADQUARTERS",
+          "data_type": "VARCHAR2(100)",
+          "description": "Location of the bank's headquarters",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["Dubai", "Abu Dhabi", "Dubai", "Dubai", "Abu Dhabi"]
+        }
+      ]
+    },
+    {
+      "table_name": "FINANCIAL_PERFORMANCE",
+      "table_description": "Quarterly and yearly financial performance metrics for banks including income, profit, loans, deposits, and key financial ratios",
+      "columns": [
+        {
+          "column_name": "PERFORMANCE_ID",
+          "data_type": "NUMBER(38,0)",
+          "description": "Unique identifier for each financial performance record",
+          "is_primary_key": true,
+          "nullable": false,
+          "sample_values": [1, 2, 3, 4, 5]
+        },
+        {
+          "column_name": "YEAR",
+          "data_type": "NUMBER(38,0)",
+          "description": "Fiscal year of the financial performance data",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [2020, 2021, 2022, 2023, 2024]
+        },
+        {
+          "column_name": "QUARTER",
+          "data_type": "NUMBER(38,0)",
+          "description": "Quarter of the fiscal year (1-4) for the performance data",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [1, 2, 3, 4, 1]
+        },
+        {
+          "column_name": "BANK_ID",
+          "data_type": "NUMBER(38,0)",
+          "description": "Reference to the bank this performance data belongs to",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [1, 1, 1, 1, 2]
+        },
+        {
+          "column_name": "YTD_INCOME",
+          "data_type": "NUMBER(38,1)",
+          "description": "Year-to-date total income in millions of currency units",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [1850.5, 3720.8, 5580.2, 7420.6, 2145.3]
+        },
+        {
+          "column_name": "YTD_PROFIT",
+          "data_type": "NUMBER(38,1)",
+          "description": "Year-to-date net profit in millions of currency units",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [465.2, 890.6, 1298.4, 1685.2, 512.8]
+        },
+        {
+          "column_name": "QUARTERLY_PROFIT",
+          "data_type": "NUMBER(38,1)",
+          "description": "Net profit for the specific quarter in millions of currency units",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [465.2, 425.4, 407.8, 386.8, 512.8]
+        },
+        {
+          "column_name": "LOANS_ADVANCES",
+          "data_type": "NUMBER(38,1)",
+          "description": "Total loans and advances issued by the bank in millions",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [95420.8, 96850.2, 98120.6, 99680.4, 87650.3]
+        },
+        {
+          "column_name": "NIM",
+          "data_type": "NUMBER(38,1)",
+          "description": "Net Interest Margin - percentage difference between interest earned and interest paid",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [3.2, 3.1, 3.0, 2.9, 3.5]
+        },
+        {
+          "column_name": "DEPOSITS",
+          "data_type": "NUMBER(38,1)",
+          "description": "Total customer deposits held by the bank in millions",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [105680.4, 108920.5, 112450.8, 115820.2, 98760.5]
+        },
+        {
+          "column_name": "CASA",
+          "data_type": "NUMBER(38,1)",
+          "description": "Current Account and Savings Account deposits in millions - low-cost funding source",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [45230.6, 46780.2, 48320.5, 49850.8, 41250.3]
+        },
+        {
+          "column_name": "COST_INCOME",
+          "data_type": "NUMBER(38,1)",
+          "description": "Cost-to-Income ratio - operating expenses as percentage of operating income",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [48.5, 49.2, 50.1, 51.2, 45.8]
+        },
+        {
+          "column_name": "NPL_RATIO",
+          "data_type": "NUMBER(38,1)",
+          "description": "Non-Performing Loans ratio - percentage of loans in default or close to default",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [3.8, 4.1, 4.5, 4.8, 3.2]
+        },
+        {
+          "column_name": "COR",
+          "data_type": "NUMBER(38,2)",
+          "description": "Cost of Risk - provision for loan losses as percentage of total loans",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [1.45, 1.52, 1.68, 1.75, 1.32]
+        },
+        {
+          "column_name": "STAGE3_COVER",
+          "data_type": "NUMBER(38,1)",
+          "description": "Stage 3 coverage ratio - provisions for impaired loans as percentage of Stage 3 loans",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [65.2, 64.8, 63.5, 62.8, 68.5]
+        },
+        {
+          "column_name": "ROTE",
+          "data_type": "NUMBER(38,1)",
+          "description": "Return on Tangible Equity - net income as percentage of tangible shareholder equity",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [8.9, 8.5, 7.8, 7.2, 9.2]
+        }
+      ]
+    },
+    {
+      "table_name": "MARKET_DATA",
+      "table_description": "Market and capital-related metrics for banks including regulatory capital ratios, share prices, and market capitalization",
+      "columns": [
+        {
+          "column_name": "MARKET_ID",
+          "data_type": "NUMBER(38,0)",
+          "description": "Unique identifier for each market data record",
+          "is_primary_key": true,
+          "nullable": false,
+          "sample_values": [1, 2, 3, 4, 5]
+        },
+        {
+          "column_name": "YEAR",
+          "data_type": "NUMBER(38,0)",
+          "description": "Year for which the market data is recorded",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [2020, 2020, 2020, 2020, 2021]
+        },
+        {
+          "column_name": "QUARTER",
+          "data_type": "NUMBER(38,0)",
+          "description": "Quarter of the year (1-4) for the market data",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [1, 2, 3, 4, 1]
+        },
+        {
+          "column_name": "BANK_ID",
+          "data_type": "NUMBER(38,0)",
+          "description": "Reference to the bank this market data belongs to",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [1, 1, 1, 1, 2]
+        },
+        {
+          "column_name": "CET1",
+          "data_type": "NUMBER(38,1)",
+          "description": "Common Equity Tier 1 capital ratio - core capital as percentage of risk-weighted assets",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [14.2, 14.0, 13.8, 13.5, 15.1]
+        },
+        {
+          "column_name": "CET_CAPITAL",
+          "data_type": "NUMBER(38,1)",
+          "description": "Common Equity Tier 1 capital amount in millions",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [12450.6, 12680.4, 13020.2, 13450.8, 11850.5]
+        },
+        {
+          "column_name": "RWA",
+          "data_type": "NUMBER(38,1)",
+          "description": "Risk-Weighted Assets - total assets adjusted for credit risk in millions",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [87680.2, 90520.8, 94380.6, 99680.4, 78450.3]
+        },
+        {
+          "column_name": "SHARE_PRICE",
+          "data_type": "NUMBER(38,2)",
+          "description": "Stock price of the bank's shares in local currency",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [35.50, 34.25, 32.80, 31.20, 38.45]
+        },
+        {
+          "column_name": "MARKET_CAP_AED_BN",
+          "data_type": "NUMBER(38,2)",
+          "description": "Market capitalization in billions of UAE Dirhams",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [7.12, 6.87, 6.58, 6.26, 8.25]
+        },
+        {
+          "column_name": "MARKET_CAP_USD_BN",
+          "data_type": "NUMBER(38,2)",
+          "description": "Market capitalization in billions of US Dollars",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [1.94, 1.87, 1.79, 1.70, 2.25]
+        },
+        {
+          "column_name": "PE_RATIO",
+          "data_type": "NUMBER(38,2)",
+          "description": "Price-to-Earnings ratio - share price relative to earnings per share",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [12.5, 11.8, 10.9, 9.5, 13.2]
+        },
+        {
+          "column_name": "PB_RATIO",
+          "data_type": "NUMBER(38,2)",
+          "description": "Price-to-Book ratio - market value relative to book value",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [1.2, 1.1, 0.95, 0.88, 1.35]
+        }
+      ]
+    },
+    {
+      "table_name": "EMPLOYEES",
+      "table_description": "Employee information table storing staff details and demographics - NOISE TABLE for testing",
+      "columns": [
+        {
+          "column_name": "EMPLOYEE_ID",
+          "data_type": "NUMBER(38,0)",
+          "description": "Unique identifier for each employee",
+          "is_primary_key": true,
+          "nullable": false,
+          "sample_values": [101, 102, 103, 104, 105]
+        },
+        {
+          "column_name": "FIRST_NAME",
+          "data_type": "VARCHAR2(50)",
+          "description": "Employee's first name",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["Ahmed", "Fatima", "Mohammed", "Sara", "Omar"]
+        },
+        {
+          "column_name": "LAST_NAME",
+          "data_type": "VARCHAR2(50)",
+          "description": "Employee's last name",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["Al-Rashid", "Khan", "Hassan", "Ali", "Malik"]
+        },
+        {
+          "column_name": "EMAIL",
+          "data_type": "VARCHAR2(100)",
+          "description": "Employee's email address",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["ahmed@bank.ae", "fatima@bank.ae", "mohammed@bank.ae", "sara@bank.ae", "omar@bank.ae"]
+        },
+        {
+          "column_name": "DEPARTMENT",
+          "data_type": "VARCHAR2(50)",
+          "description": "Department where employee works",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["IT", "HR", "Finance", "Operations", "Risk"]
+        },
+        {
+          "column_name": "SALARY",
+          "data_type": "NUMBER(10,2)",
+          "description": "Employee's annual salary",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [85000, 92000, 78000, 95000, 88000]
+        }
+      ]
+    },
+    {
+      "table_name": "PRODUCTS",
+      "table_description": "Product catalog containing items and inventory information - NOISE TABLE for testing",
+      "columns": [
+        {
+          "column_name": "PRODUCT_ID",
+          "data_type": "NUMBER(38,0)",
+          "description": "Unique identifier for each product",
+          "is_primary_key": true,
+          "nullable": false,
+          "sample_values": [201, 202, 203, 204, 205]
+        },
+        {
+          "column_name": "PRODUCT_NAME",
+          "data_type": "VARCHAR2(100)",
+          "description": "Name of the product",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["Laptop", "Mouse", "Keyboard", "Monitor", "Printer"]
+        },
+        {
+          "column_name": "CATEGORY",
+          "data_type": "VARCHAR2(50)",
+          "description": "Product category classification",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["Electronics", "Accessories", "Accessories", "Electronics", "Electronics"]
+        },
+        {
+          "column_name": "PRICE",
+          "data_type": "NUMBER(10,2)",
+          "description": "Product price in currency units",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [2500, 45, 85, 1200, 850]
+        },
+        {
+          "column_name": "STOCK_QUANTITY",
+          "data_type": "NUMBER(38,0)",
+          "description": "Available quantity in stock",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [150, 500, 320, 85, 45]
+        }
+      ]
+    },
+    {
+      "table_name": "VEHICLES",
+      "table_description": "Vehicle fleet management and registration data - NOISE TABLE for testing",
+      "columns": [
+        {
+          "column_name": "VEHICLE_ID",
+          "data_type": "NUMBER(38,0)",
+          "description": "Unique identifier for each vehicle",
+          "is_primary_key": true,
+          "nullable": false,
+          "sample_values": [301, 302, 303, 304, 305]
+        },
+        {
+          "column_name": "MAKE",
+          "data_type": "VARCHAR2(50)",
+          "description": "Vehicle manufacturer",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["Toyota", "Honda", "BMW", "Mercedes", "Nissan"]
+        },
+        {
+          "column_name": "MODEL",
+          "data_type": "VARCHAR2(50)",
+          "description": "Vehicle model name",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["Camry", "Accord", "X5", "E-Class", "Altima"]
+        },
+        {
+          "column_name": "YEAR",
+          "data_type": "NUMBER(4,0)",
+          "description": "Manufacturing year",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [2020, 2021, 2022, 2023, 2019]
+        },
+        {
+          "column_name": "LICENSE_PLATE",
+          "data_type": "VARCHAR2(20)",
+          "description": "Vehicle registration number",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["DXB-12345", "AUH-67890", "SHJ-11111", "AJM-22222", "RAK-33333"]
+        }
+      ]
+    },
+    {
+      "table_name": "WEATHER_DATA",
+      "table_description": "Weather observations and meteorological measurements - NOISE TABLE for testing",
+      "columns": [
+        {
+          "column_name": "OBSERVATION_ID",
+          "data_type": "NUMBER(38,0)",
+          "description": "Unique identifier for each weather observation",
+          "is_primary_key": true,
+          "nullable": false,
+          "sample_values": [401, 402, 403, 404, 405]
+        },
+        {
+          "column_name": "LOCATION",
+          "data_type": "VARCHAR2(100)",
+          "description": "Location of weather observation",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["Dubai", "Abu Dhabi", "Sharjah", "Ajman", "Ras Al Khaimah"]
+        },
+        {
+          "column_name": "TEMPERATURE",
+          "data_type": "NUMBER(5,2)",
+          "description": "Temperature in Celsius",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [35.5, 38.2, 33.8, 36.1, 34.5]
+        },
+        {
+          "column_name": "HUMIDITY",
+          "data_type": "NUMBER(5,2)",
+          "description": "Humidity percentage",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [65.5, 72.3, 58.9, 68.2, 61.5]
+        },
+        {
+          "column_name": "OBSERVATION_DATE",
+          "data_type": "DATE",
+          "description": "Date and time of observation",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["2024-01-15", "2024-01-16", "2024-01-17", "2024-01-18", "2024-01-19"]
+        }
+      ]
+    },
+    {
+      "table_name": "RESTAURANTS",
+      "table_description": "Restaurant listings and ratings information - NOISE TABLE for testing",
+      "columns": [
+        {
+          "column_name": "RESTAURANT_ID",
+          "data_type": "NUMBER(38,0)",
+          "description": "Unique identifier for each restaurant",
+          "is_primary_key": true,
+          "nullable": false,
+          "sample_values": [501, 502, 503, 504, 505]
+        },
+        {
+          "column_name": "RESTAURANT_NAME",
+          "data_type": "VARCHAR2(100)",
+          "description": "Name of the restaurant",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["The Palm Grill", "Saffron Spice", "Marina Seafood", "Desert Rose", "Golden Fork"]
+        },
+        {
+          "column_name": "CUISINE_TYPE",
+          "data_type": "VARCHAR2(50)",
+          "description": "Type of cuisine served",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["Mediterranean", "Indian", "Seafood", "Arabic", "International"]
+        },
+        {
+          "column_name": "RATING",
+          "data_type": "NUMBER(3,2)",
+          "description": "Average customer rating out of 5",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": [4.5, 4.2, 4.8, 4.1, 4.6]
+        },
+        {
+          "column_name": "PRICE_RANGE",
+          "data_type": "VARCHAR2(10)",
+          "description": "Price category ($ to $$$$)",
+          "is_primary_key": false,
+          "nullable": true,
+          "sample_values": ["$$$", "$$", "$$$$", "$$", "$$$"]
+        }
+      ]
+    }
+  ]
+}

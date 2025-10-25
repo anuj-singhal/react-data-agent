@@ -1,433 +1,342 @@
 """
-Advanced RAG System with Schema-Aware Retrieval and Pattern Matching.
+RAG System - Handles all retrieval and context building
 """
 
-import logging
-import hashlib
-import json
-import os
-from typing import List, Dict, Any, Optional, Tuple, Set
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
+from sentence_transformers import SentenceTransformer
 import chromadb
 from chromadb.config import Settings
-from chromadb.utils import embedding_functions
 import networkx as nx
-import sqlparse
-from collections import defaultdict
-import re
+import numpy as np
+from typing import List, Dict, Any, Set, Optional, Tuple
+from datetime import datetime
+from .rag_config import (
+    RAGConfig, DataLoader, Table, Relationship, QueryHistory
+)
 
-logger = logging.getLogger(__name__)
-
-@dataclass
-class SchemaNode:
-    """Represents a table in the schema graph."""
-    table_name: str
-    columns: Dict[str, Any]
-    primary_keys: List[str]
-    foreign_keys: Dict[str, str]
-    indexes: List[str]
-    relationships: Dict[str, str]
-    common_queries: List[str]
-
-@dataclass
-class QueryPattern:
-    """Represents a reusable query pattern."""
-    pattern_id: str
-    name: str
-    template: str
-    description: str
-    applicable_conditions: List[str]
-    example_usage: str
-    performance_notes: str
 
 class RAGSystem:
-    """
-    Advanced RAG system with schema-aware retrieval and pattern matching.
-    """
+    """Complete RAG system for schema search and context building"""
     
     def __init__(self, 
-                 persist_directory: str = "./vector_db2/chroma_db_advanced",
-                 collection_prefix: str = "oracle_advanced",
-                 embedding_model: str = "all-MiniLM-L6-v2"):
-        """Initialize Advanced RAG system."""
-        self.persist_directory = persist_directory
-        self.collection_prefix = collection_prefix
+                 data_dict_path: str = None,
+                 relationships_path: str = None,
+                 query_history_path: str = None,
+                 use_sample_values: bool = True):
         
-        # Initialize ChromaDB client
-        self.client = chromadb.PersistentClient(
-            path=persist_directory,
-            settings=Settings(
-                anonymized_telemetry=False,
-                allow_reset=True
-            )
+        self.config = RAGConfig()
+        self.use_sample_values = use_sample_values
+        
+        # Use default paths if not provided
+        self.data_dict_path = data_dict_path or self.config.DEFAULT_DATA_DICT_PATH
+        self.relationships_path = relationships_path or self.config.DEFAULT_RELATIONSHIPS_PATH
+        self.query_history_path = query_history_path or self.config.DEFAULT_QUERY_HISTORY_PATH
+        
+        
+    def initialize_rag(self):
+        # Initialize RAG components
+        self._initialize_components()
+        self._load_data()
+        self._index_data()
+        return True
+
+    def _initialize_components(self):
+        """Initialize RAG components"""
+        # Initialize embedding model
+        self.embedding_model = SentenceTransformer(self.config.EMBEDDING_MODEL)
+        
+        # Initialize ChromaDB
+        self.chroma_client = chromadb.PersistentClient(
+            path=self.config.CHROMA_DB_PATH,
+            settings=Settings(**self.config.CHROMA_SETTINGS)
         )
         
-        # Initialize embedding function
-        try:
-            self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
-                model_name=embedding_model,
-                device="cpu"
+        # Create collections
+        self.table_collection = self.chroma_client.get_or_create_collection(
+            name="table_metadata",
+            metadata={"hnsw:space": "cosine"}
+        )
+        self.column_collection = self.chroma_client.get_or_create_collection(
+            name="column_metadata",
+            metadata={"hnsw:space": "cosine"}
+        )
+        
+        # Initialize graph
+        self.graph = nx.DiGraph()
+        
+        # Query history
+        self.query_history = []
+        self.query_embeddings = None
+    
+    def _load_data(self):
+        """Load all data from JSON files"""
+        print("Loading schema data...")
+        self.tables = DataLoader.load_data_dictionary(self.data_dict_path)
+        self.relationships = DataLoader.load_relationships(self.relationships_path)
+        self.query_history = DataLoader.load_query_history(self.query_history_path)
+        
+        # Build graph
+        self._build_graph()
+        
+        # Store tables dict for quick access
+        self.tables_dict = {table.table_name: table for table in self.tables}
+        
+        print(f"Loaded {len(self.tables)} tables, {len(self.relationships)} relationships")
+    
+    def _build_graph(self):
+        """Build relationship graph"""
+        # Add nodes
+        for table in self.tables:
+            self.graph.add_node(table.table_name, data=table)
+        
+        # Add edges
+        for rel in self.relationships:
+            self.graph.add_edge(
+                rel.parent_table,
+                rel.child_table,
+                relationship=rel
             )
-        except:
-            logger.warning("Using default embedding function")
-            self.embedding_function = None
-        
-        # Initialize collections
-        self._initialize_collections()
-        
-        # Initialize schema graph
-        self.schema_graph = nx.DiGraph()
-        self.table_index = {}
-        self.column_index = defaultdict(list)
-        
-        # Initialize pattern library
-        self.pattern_library = {}
-        
-        # Query cache
-        self.query_cache = {}
-        self.cache_ttl = timedelta(hours=1)
-        
-        logger.info("Advanced RAG System initialized")
     
-    def _initialize_collections(self):
-        """Initialize ChromaDB collections."""
-        collection_configs = {
-            'schema': 'Schema and DDL information',
-            'queries': 'Validated SQL queries',
-            'patterns': 'Query patterns and templates',
-            'dictionary': 'Data dictionary entries',
-            'relationships': 'Table relationships'
-        }
+    def _index_data(self):
+        """Index schema and query history"""
+        print("Indexing schema...")
+        self._index_schema()
         
-        self.collections = {}
-        for name, description in collection_configs.items():
-            collection_name = f"{self.collection_prefix}_{name}"
+        print("Indexing query history...")
+        self._index_query_history()
+    
+    def _index_schema(self):
+        """Index tables and columns for semantic search"""
+        table_texts = []
+        table_metadatas = []
+        table_ids = []
+        
+        column_texts = []
+        column_metadatas = []
+        column_ids = []
+        
+        for table in self.tables:
+            # Table indexing
+            table_text = table.to_text()
+            table_texts.append(table_text)
+            table_metadatas.append({
+                "table_name": table.table_name,
+                "description": table.table_description
+            })
+            table_ids.append(table.table_name)
+            
+            # Column indexing
+            for col in table.columns:
+                samples_text = f" (Examples: {', '.join(str(v) for v in col.sample_values[:3])})" if col.sample_values else ""
+                column_text = f"{table.table_name}.{col.column_name}: {col.description}{samples_text}"
+                
+                column_texts.append(column_text)
+                column_metadatas.append({
+                    "table_name": table.table_name,
+                    "column_name": col.column_name,
+                    "data_type": col.data_type
+                })
+                column_ids.append(f"{table.table_name}.{col.column_name}")
+        
+        # Clear and add to collections
+        self._update_collection(self.table_collection, table_texts, table_metadatas, table_ids)
+        self._update_collection(self.column_collection, column_texts, column_metadatas, column_ids)
+    
+    def _update_collection(self, collection, texts, metadatas, ids):
+        """Update ChromaDB collection"""
+        if texts:
             try:
-                if self.embedding_function:
-                    self.collections[name] = self.client.get_or_create_collection(
-                        name=collection_name,
-                        metadata={"description": description},
-                        embedding_function=self.embedding_function
-                    )
-                else:
-                    self.collections[name] = self.client.get_or_create_collection(
-                        name=collection_name,
-                        metadata={"description": description}
-                    )
-            except Exception as e:
-                logger.error(f"Failed to create collection {name}: {e}")
+                existing_ids = collection.get()['ids']
+                if existing_ids:
+                    collection.delete(ids=existing_ids)
+            except:
+                pass
+            
+            embeddings = self.embedding_model.encode(texts).tolist()
+            collection.add(
+                embeddings=embeddings,
+                documents=texts,
+                metadatas=metadatas,
+                ids=ids
+            )
     
-    def build_schema_graph(self, data_dictionary: Dict[str, Dict[str, Any]]) -> None:
-        """Build schema graph from data dictionary."""
-        for table_name, table_info in data_dictionary.items():
-            # Add table node
-            self.schema_graph.add_node(table_name, **table_info)
-            self.table_index[table_name] = table_info
-            
-            # Index columns
-            for column_name in table_info.get('columns', {}):
-                self.column_index[column_name].append(table_name)
-            
-            # Add relationships as edges
-            relationships = table_info.get('relationships', {})
-            for related_table, relationship_type in relationships.items():
-                self.schema_graph.add_edge(
-                    table_name, 
-                    related_table,
-                    relationship=relationship_type
-                )
+    def _index_query_history(self):
+        """Index historical queries for similarity matching"""
+        if not self.query_history:
+            return
         
-        logger.info(f"Built schema graph with {len(self.schema_graph.nodes)} tables")
+        all_texts = []
+        for query in self.query_history:
+            texts = [query.natural_language] + query.variations
+            all_texts.append(" | ".join(texts))
+        
+        if all_texts:
+            self.query_embeddings = self.embedding_model.encode(all_texts)
     
-    def get_related_tables(self, tables: List[str], max_depth: int = 2) -> Set[str]:
-        """Get related tables within specified depth."""
-        related = set(tables)
+    def search_relevant_tables(self, query: str) -> Dict[str, Any]:
+        """Search for relevant tables and columns"""
+        query_embedding = self.embedding_model.encode([query]).tolist()
+        
+        # Search tables
+        table_results = self.table_collection.query(
+            query_embeddings=query_embedding,
+            n_results=min(self.config.TOP_K_TABLES, len(self.tables_dict))
+        )
+        
+        # Search columns
+        column_results = self.column_collection.query(
+            query_embeddings=query_embedding,
+            n_results=self.config.TOP_K_COLUMNS
+        )
+        
+        # Extract relevant tables
+        relevant_tables = set()
+        if table_results['ids']:
+            relevant_tables.update(table_results['ids'][0])
+        
+        if column_results['metadatas']:
+            for metadata_list in column_results['metadatas']:
+                for metadata in metadata_list:
+                    if 'table_name' in metadata:
+                        relevant_tables.add(metadata['table_name'])
+        
+        # Expand with related tables
+        expanded_tables = self._expand_with_relationships(relevant_tables)
+        
+        return {
+            'tables': list(expanded_tables),
+            'table_results': table_results,
+            'column_results': column_results,
+            'sample_values': self._get_sample_values(expanded_tables)
+        }
+    
+    def _expand_with_relationships(self, tables: Set[str]) -> Set[str]:
+        """Expand tables with their relationships"""
+        expanded = set(tables)
         
         for table in tables:
-            if table in self.schema_graph:
-                # Get neighbors within max_depth
-                for depth in range(1, max_depth + 1):
-                    neighbors = nx.single_source_shortest_path_length(
-                        self.schema_graph, table, cutoff=depth
-                    )
-                    related.update(neighbors.keys())
+            if table in self.graph:
+                # Add related tables
+                try:
+                    # Get neighbors within depth
+                    for depth in range(1, self.config.MAX_RELATIONSHIP_DEPTH + 1):
+                        neighbors = nx.single_source_shortest_path_length(
+                            self.graph, table, cutoff=depth
+                        ).keys()
+                        expanded.update(neighbors)
+                    
+                    # Add ancestors
+                    ancestors = nx.ancestors(self.graph, table)
+                    expanded.update(ancestors)
+                except:
+                    pass
         
-        return related
+        return expanded
     
-    def identify_required_tables(self, task: str) -> List[str]:
-        """Identify tables required for a task using NLP and schema analysis."""
-        required_tables = []
-        task_lower = task.lower()
-        
-        # Direct table mentions
-        for table_name in self.table_index.keys():
-            if table_name.lower() in task_lower:
-                required_tables.append(table_name)
-        
-        # Column mentions
-        for column_name, tables in self.column_index.items():
-            if column_name.lower() in task_lower:
-                required_tables.extend(tables)
-        
-        # Business term mapping
-        business_terms = {
-            'profit': ['financial_performance'],
-            'revenue': ['financial_performance'],
-            'income': ['financial_performance'],
-            'market cap': ['market_data'],
-            'share price': ['market_data'],
-            'capital': ['market_data'],
-            'bank': ['banks']
-        }
-        
-        for term, tables in business_terms.items():
-            if term in task_lower:
-                required_tables.extend(tables)
-        
-        # Get unique tables and their related tables
-        unique_tables = list(set(required_tables))
-        related_tables = self.get_related_tables(unique_tables, max_depth=1)
-        
-        return list(related_tables)
+    def _get_sample_values(self, tables: Set[str]) -> Dict[str, Dict]:
+        """Get sample values for tables"""
+        sample_values = {}
+        for table_name in tables:
+            if table_name in self.tables_dict:
+                table = self.tables_dict[table_name]
+                sample_values[table_name] = {
+                    col.column_name: col.sample_values
+                    for col in table.columns
+                    if col.sample_values
+                }
+        return sample_values
     
-    def get_relevant_context(self, task: str, top_k: int = 10) -> Dict[str, Any]:
-        """Get comprehensive context for SQL generation."""
+    def find_similar_query(self, query: str) -> Optional[Tuple[QueryHistory, float]]:
+        """Find similar query in history"""
+        if not self.query_history or self.query_embeddings is None:
+            return None
+        
+        query_embedding = self.embedding_model.encode([query])
+        similarities = np.dot(self.query_embeddings, query_embedding.T).flatten()
+        
+        best_idx = np.argmax(similarities)
+        best_score = similarities[best_idx]
+        
+        if best_score >= self.config.SIMILARITY_THRESHOLD:
+            matched_query = self.query_history[best_idx]
+            matched_query.usage_count += 1
+            matched_query.last_used = datetime.now().isoformat()
+            return matched_query, best_score
+        
+        return None
+    
+    def add_query_to_history(self, nl_query: str, sql_query: str, tables_used: List[str]):
+        """Add new query to history"""
+        new_query = QueryHistory(
+            id=f"q_{len(self.query_history) + 1:03d}",
+            natural_language=nl_query,
+            variations=[],
+            sql_query=sql_query,
+            tables_used=tables_used,
+            query_type="generated",
+            performance_score=0.0,
+            usage_count=1,
+            last_used=datetime.now().isoformat()
+        )
+        
+        self.query_history.append(new_query)
+        DataLoader.save_query_history(self.query_history_path, self.query_history)
+        
+        # Re-index
+        self._index_query_history()
+        
+        return new_query
+    
+    def build_context(self, tables: List[str], user_query: str) -> Dict[str, Any]:
+        """Build context for LLM"""
         context = {
-            'schema_graph': {},
-            'ddl': [],
-            'dictionary': [],
-            'patterns': [],
-            'validated_queries': [],
+            'user_query': user_query,
+            'tables': {},
             'relationships': [],
-            'schema_summary': {}
+            'sample_values': {}
         }
         
-        # Identify required tables
-        required_tables = self.identify_required_tables(task)
+        # Add table information
+        for table_name in tables:
+            if table_name in self.tables_dict:
+                table = self.tables_dict[table_name]
+                
+                table_info = {
+                    'description': table.table_description,
+                    'columns': []
+                }
+                
+                for col in table.columns:
+                    col_info = {
+                        'name': col.column_name,
+                        'type': col.data_type,
+                        'description': col.description,
+                        'is_pk': col.is_primary_key
+                    }
+                    if col.sample_values:
+                        col_info['samples'] = col.sample_values[:3]
+                    table_info['columns'].append(col_info)
+                
+                context['tables'][table_name] = table_info
+                
+                # Add sample values
+                if self.use_sample_values:
+                    context['sample_values'][table_name] = {
+                        col.column_name: col.sample_values
+                        for col in table.columns
+                        if col.sample_values
+                    }
         
-        # Build schema graph context
-        for table in required_tables:
-            if table in self.table_index:
-                context['schema_graph'][table] = self.table_index[table]
-                context['schema_summary'][table] = list(
-                    self.table_index[table].get('columns', {}).keys()
-                )
-        
-        # Retrieve DDL for required tables
-        if self.collections.get('schema'):
-            where_clause = {"$or": [{"table_name": table} for table in required_tables]} if required_tables else None
-            results = self.collections['schema'].query(
-                query_texts=[task],
-                n_results=min(top_k, len(required_tables) * 2) if required_tables else top_k,
-                where=where_clause
-            )
-            
-            if results['documents'][0]:
-                for doc, metadata in zip(results['documents'][0], results['metadatas'][0]):
-                    context['ddl'].append({
-                        'content': doc,
-                        'metadata': metadata
-                    })
-        
-        # Retrieve similar validated queries
-        if self.collections.get('queries'):
-            results = self.collections['queries'].query(
-                query_texts=[f"Task: {task}"],
-                n_results=top_k,
-                where={"user_validated": True}
-            )
-            
-            if results['documents'][0]:
-                for doc, metadata, distance in zip(
-                    results['documents'][0], 
-                    results['metadatas'][0],
-                    results['distances'][0]
-                ):
-                    similarity = 1 - (distance / 2)
-                    if similarity > 0.7:
-                        context['validated_queries'].append({
-                            'task': metadata.get('task', ''),
-                            'sql': metadata.get('sql_query', ''),
-                            'similarity': similarity
-                        })
-        
-        # Retrieve applicable patterns
-        patterns = self.find_applicable_patterns(task)
-        context['patterns'] = patterns
-        
-        # Add relationship information
-        for table in required_tables:
-            if table in self.schema_graph:
-                neighbors = list(self.schema_graph.neighbors(table))
-                if neighbors:
-                    context['relationships'].append({
-                        'table': table,
-                        'related_to': neighbors
-                    })
+        # Add relationships
+        for rel in self.relationships:
+            if rel.parent_table in tables and rel.child_table in tables:
+                context['relationships'].append({
+                    'from': f"{rel.parent_table}.{rel.parent_column}",
+                    'to': f"{rel.child_table}.{rel.child_column}",
+                    'type': rel.relationship_type,
+                    'description': rel.description
+                })
         
         return context
     
-    def find_applicable_patterns(self, task: str) -> List[Dict[str, Any]]:
-        """Find applicable query patterns for the task."""
-        applicable = []
-        task_lower = task.lower()
-        
-        # Pattern detection rules
-        pattern_rules = {
-            'aggregation': ['sum', 'average', 'count', 'total', 'mean', 'max', 'min'],
-            'join_query': ['compare', 'across', 'between', 'with', 'join'],
-            'year_over_year': ['year-over-year', 'yoy', 'growth', 'change', 'trend'],
-            'window_function': ['rank', 'top', 'bottom', 'running', 'cumulative', 'lag', 'lead'],
-            'filtering': ['where', 'filter', 'only', 'specific', 'equal', 'greater', 'less']
-        }
-        
-        for pattern_name, keywords in pattern_rules.items():
-            if any(keyword in task_lower for keyword in keywords):
-                if pattern_name in self.pattern_library:
-                    applicable.append({
-                        'name': pattern_name,
-                        'template': self.pattern_library[pattern_name].template,
-                        'description': self.pattern_library[pattern_name].description
-                    })
-        
-        return applicable
-    
-    def add_validated_query(self, 
-                           task: str, 
-                           sql_query: str,
-                           metadata: Dict[str, Any] = None) -> bool:
-        """Add a validated query to the system."""
-        try:
-            # Parse SQL to extract tables and columns
-            tables, columns = self._extract_sql_elements(sql_query)
-            
-            doc_id = f"query_{hashlib.md5((task + sql_query).encode()).hexdigest()[:16]}"
-            doc_text = f"Task: {task}\nSQL: {sql_query}"
-            
-            query_metadata = {
-                'task': task,
-                'sql_query': sql_query,
-                'tables_used': json.dumps(list(tables)),
-                'columns_used': json.dumps(list(columns)),
-                'timestamp': datetime.now().isoformat(),
-                'user_validated': True,
-                'execution_count': 0
-            }
-            
-            if metadata:
-                query_metadata.update(metadata)
-            
-            self.collections['queries'].add(
-                documents=[doc_text],
-                metadatas=[query_metadata],
-                ids=[doc_id]
-            )
-            
-            # Update pattern library if applicable
-            self._update_pattern_library(task, sql_query)
-            
-            logger.info(f"Added validated query for task: {task[:50]}...")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Error adding validated query: {e}")
-            return False
-    
-    def _extract_sql_elements(self, sql_query: str) -> Tuple[Set[str], Set[str]]:
-        """Extract tables and columns from SQL query."""
-        tables = set()
-        columns = set()
-        
-        try:
-            parsed = sqlparse.parse(sql_query)[0]
-            
-            # Extract tables (simplified - you might want to use a proper SQL parser)
-            from_idx = None
-            tokens = parsed.tokens
-            
-            for i, token in enumerate(tokens):
-                if token.ttype is sqlparse.tokens.Keyword and token.value.upper() == 'FROM':
-                    from_idx = i
-                    break
-            
-            if from_idx is not None:
-                # Look for table names after FROM
-                for token in tokens[from_idx + 1:]:
-                    if token.ttype is sqlparse.tokens.Keyword:
-                        break
-                    if not token.is_whitespace:
-                        # Extract table name (simplified)
-                        table_str = str(token).strip()
-                        # Handle aliases
-                        table_parts = table_str.split()
-                        if table_parts:
-                            tables.add(table_parts[0])
-            
-            # Extract columns (simplified)
-            select_pattern = r'SELECT\s+(.*?)\s+FROM'
-            select_match = re.search(select_pattern, sql_query, re.IGNORECASE | re.DOTALL)
-            if select_match:
-                select_clause = select_match.group(1)
-                # Parse column names (simplified)
-                column_parts = select_clause.split(',')
-                for part in column_parts:
-                    # Extract column name before any alias
-                    col_match = re.search(r'(\w+\.)?(\w+)', part.strip())
-                    if col_match:
-                        columns.add(col_match.group(2))
-            
-        except Exception as e:
-            logger.error(f"Error extracting SQL elements: {e}")
-        
-        return tables, columns
-    
-    def _update_pattern_library(self, task: str, sql_query: str):
-        """Update pattern library based on validated queries."""
-        # Analyze query structure to identify patterns
-        task_lower = task.lower()
-        
-        # Check for year-over-year pattern
-        if 'lag(' in sql_query.lower() or 'lead(' in sql_query.lower():
-            if 'year_over_year' not in self.pattern_library:
-                self.pattern_library['year_over_year'] = QueryPattern(
-                    pattern_id='yoy_001',
-                    name='year_over_year',
-                    template=sql_query,
-                    description='Year-over-year comparison pattern',
-                    applicable_conditions=['growth', 'trend', 'change'],
-                    example_usage=task,
-                    performance_notes='Uses window functions, ensure proper indexing'
-                )
-    
-    def get_statistics(self) -> Dict[str, Any]:
-        """Get comprehensive statistics about the RAG system."""
-        stats = {
-            'collections': {},
-            'schema_graph': {
-                'tables': len(self.schema_graph.nodes),
-                'relationships': len(self.schema_graph.edges),
-                'avg_connections': nx.average_degree_connectivity(self.schema_graph) if self.schema_graph.nodes else 0
-            },
-            'pattern_library': {
-                'total_patterns': len(self.pattern_library),
-                'pattern_names': list(self.pattern_library.keys())
-            },
-            'cache': {
-                'cached_queries': len(self.query_cache)
-            }
-        }
-        
-        # Collection statistics
-        for name, collection in self.collections.items():
-            try:
-                stats['collections'][name] = collection.count()
-            except:
-                stats['collections'][name] = 0
-        
-        return stats
-    
-    def clear_cache(self):
-        """Clear query cache."""
-        self.query_cache = {}
-        logger.info("Query cache cleared")
+# Singleton instance
+rag_agent = RAGSystem()

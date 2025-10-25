@@ -1,0 +1,20 @@
+{
+  "relationships": [
+    {
+      "parent_table": "BANKS",
+      "parent_column": "BANK_ID",
+      "child_table": "FINANCIAL_PERFORMANCE",
+      "child_column": "BANK_ID",
+      "relationship_type": "one_to_many",
+      "description": "Each bank can have multiple financial performance records across different quarters and years"
+    },
+    {
+      "parent_table": "BANKS",
+      "parent_column": "BANK_ID",
+      "child_table": "MARKET_DATA",
+      "child_column": "BANK_ID",
+      "relationship_type": "one_to_many",
+      "description": "Each bank can have multiple market data records for different time periods"
+    }
+  ]
+}

@@ -4,9 +4,10 @@ import logging
 from typing import Dict, Optional
 from config.settings import settings
 from models.chat import ConversationContext, ChatResponse
-from services.sql_converter import sql_converter
+from services.sql_converter_agent.llm_generator import sql_converter
 from services.query_executor import query_executor
 from services.mcp_client import mcp_client
+from services.rag_agent.rag_system import rag_agent
 from .utils import clean_sql_query, extract_query_from_execute_command, is_simple_confirmation
 
 logger = logging.getLogger(__name__)
@@ -28,7 +29,8 @@ class QueryHandler:
             self.llm = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
             logger.info("OpenAI client initialized for query handling")
     
-    async def generate_query(self, message: str, intent_dict, rag_context, session_id: str) -> ChatResponse:
+    async def generate_query(self, message: str, session_id: str, 
+                             p_context) -> ChatResponse:
         """
         Generate SQL query from natural language.
         
@@ -43,13 +45,44 @@ class QueryHandler:
             # Check MCP connection
             if not mcp_client.connected:
                 await mcp_client.reconnect()
-            
-            # Generate SQL from natural language
-            sql_query = await sql_converter.convert_to_sql(message, intent_dict, rag_context, mcp_client.tools)
-            sql_query = clean_sql_query(sql_query)
+            rag_messages, previous_messages, last_sql = self._get_messages(p_context)
+
+            if(rag_messages):
+                message = rag_messages
+
+            # Step 1: Check query history for similar queries
+            cached_result = rag_agent.find_similar_query(message)
+            sql_query = None
+            if cached_result:
+                query, similarity = cached_result
+                print(f"Found cached query with similarity: {similarity:.2f}")
+                cached_dict = {
+                    'sql': query.sql_query,
+                    'tables': query.tables_used,
+                    'source': 'cache',
+                    'similarity_score': similarity,
+                    'query_id': query.id
+                }
+                sql_query = query.sql_query
+                print(cached_dict)
+            else:
+                # Generate SQL from natural language
+                # Step 2: Find relevant tables using RAG
+                search_results = rag_agent.search_relevant_tables(message)
+                tables = search_results['tables']
+                
+                print(f"Identified tables: {tables}")
+                # Step 3: Build context for LLM
+                context = rag_agent.build_context(tables, message)
+                # Step 4: Generate SQL using LLM
+                sql_query = await sql_converter.generate_sql(context, previous_messages, last_sql)
+                sql_query = clean_sql_query(sql_query)
+
+                # sql_query = await sql_converter.convert_to_sql(message, intent_dict, mcp_client.tools)
+                
             
             # Create confirmation message
-            confirmation_msg = f"""I've generated the following SQL query:
+            confirmation_msg = f"""I've generated/cached the following SQL query:
 
 ```sql
 {sql_query}
@@ -157,11 +190,30 @@ What would you like to do next?"""
                 action_type="query_execution"
             )
     
+    def _get_messages(self, context):
+        prompt_parts = []
+        rag_parts = []
+        sep = "\n\n"
+        sep_2 = " also "
+        for message in context.messages:
+            role = message.role
+            content = message.content
+            if(role == "user"):
+                prompt_parts.append(f"{role}: {content}")
+                rag_parts.append(content)
+
+        previous_messages = sep.join(prompt_parts)
+        rag_messages = sep_2.join(rag_parts)
+        
+        return rag_messages, previous_messages, context.last_sql
+
     async def modify_query(
         self, 
         message: str, 
         original_sql: str,
-        session_id: str
+        session_id: str,
+        previous_messages,
+        rag_context
     ) -> ChatResponse:
         """
         Modify an existing SQL query based on user feedback.
@@ -177,7 +229,7 @@ What would you like to do next?"""
         try:
             # Use LLM to modify the query if available
             if self.llm:
-                modified_sql = await self._modify_query_with_llm(original_sql, message)
+                modified_sql = await self._modify_query_with_llm(original_sql, message, previous_messages)
             else:
                 # Generate new query as fallback
                 modified_sql = await sql_converter.convert_to_sql(message, mcp_client.tools)
@@ -213,7 +265,7 @@ Would you like to:
                 action_type="general"
             )
     
-    async def _modify_query_with_llm(self, original_sql: str, modification_request: str) -> str:
+    async def _modify_query_with_llm(self, original_sql: str, modification_request: str, previous_messages) -> str:
         """
         Use LLM to modify SQL query.
         
@@ -233,6 +285,11 @@ Original SQL:
 
 User's modification request:
 {modification_request}
+
+User's last requests and responses with last created SQL's:
+{previous_messages}
+
+
 
 Important:
 - Return ONLY the modified SQL query

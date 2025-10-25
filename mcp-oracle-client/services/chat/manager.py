@@ -7,6 +7,7 @@ from .context_manager import ContextManager
 from .intent_classifier import IntentClassifier
 from .query_handler import QueryHandler
 from .followup_handler import FollowUpHandler
+from services.rag_agent.rag_system import rag_agent
 
 logger = logging.getLogger(__name__)
 
@@ -141,9 +142,29 @@ class ChatManager:
         if not context.last_sql:
             # No query to modify, treat as new query
             return await self._handle_new_query(session_id, message, context)
+        prompt_parts = []
+        rag_parts = []
+        sep = "\n\n"
+        sep_2 = " also "
+        for message in context.messages:
+            role = message.role
+            content = message.content
+            if(role == "user"):
+                prompt_parts.append(f"{role}: {content}")
+                rag_parts.append(content)
+
+        previous_messages = sep.join(prompt_parts)
+        rag_messages = sep_2.join(rag_parts)
+
+        search_results = rag_agent.search_relevant_tables(rag_messages)
+        tables = search_results['tables']
         
+        print(f"Identified tables: {tables}")
+        # Step 3: Build context for LLM
+        rag_context = rag_agent.build_context(tables, message)
+
         response = await self.query_handler.modify_query(
-            message, context.last_sql, session_id
+            message, context.last_sql, session_id, previous_messages, rag_context
         )
         
         # Update pending SQL if modified

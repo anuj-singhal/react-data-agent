@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config.settings import settings
 from config.logging_config import setup_logging
 from services.mcp_client import mcp_client
+from services.rag_agent.rag_system import rag_agent
 
 # Import routers - NO CHANGES to existing routers needed!
 from routers import query, database, health
@@ -39,6 +40,13 @@ async def lifespan(app: FastAPI):
     else:
         logger.error("Failed to connect to MCP Oracle server")
     
+    rag_initialize = rag_agent.initialize_rag()
+
+    if rag_initialize:
+        logger.info("Successfully Initialized RAG")
+    else:
+        logger.error("Failed to Initialized RAG")
+
     yield
     
     # Cleanup on shutdown

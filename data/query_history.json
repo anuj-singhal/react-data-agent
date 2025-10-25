@@ -1,0 +1,533 @@
+{
+  "queries": [
+    {
+      "id": "q_001",
+      "natural_language": "Show me the financial performance of Mashreq bank for 2020",
+      "variations": [
+        "Get Mashreq bank's 2020 financial metrics",
+        "What was Mashreq's performance in 2020",
+        "Display financial data for Mashreq in year 2020",
+        "Mashreq bank financials 2020",
+        "How did Mashreq perform financially in 2020"
+      ],
+      "sql_query": "SELECT fp.* FROM FINANCIAL_PERFORMANCE fp JOIN BANKS b ON fp.BANK_ID = b.BANK_ID WHERE b.BANK_NAME = 'Mashreq' AND fp.YEAR = 2020 ORDER BY fp.QUARTER",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.95,
+      "usage_count": 12,
+      "last_used": "2024-01-15T10:30:00Z"
+    },
+    {
+      "id": "q_002",
+      "natural_language": "Which banks have the highest NPL ratio in Q4 2020",
+      "variations": [
+        "Find banks with highest non-performing loans in Q4 2020",
+        "Show banks with worst NPL ratio in fourth quarter 2020",
+        "Banks with high bad loans Q4 2020",
+        "Top banks by NPL ratio Q4 2020"
+      ],
+      "sql_query": "SELECT b.BANK_NAME, fp.NPL_RATIO FROM FINANCIAL_PERFORMANCE fp JOIN BANKS b ON fp.BANK_ID = b.BANK_ID WHERE fp.YEAR = 2020 AND fp.QUARTER = 4 ORDER BY fp.NPL_RATIO DESC",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.92,
+      "usage_count": 8,
+      "last_used": "2024-01-14T15:45:00Z"
+    },
+    {
+      "id": "q_003",
+      "natural_language": "Compare market capitalization of all banks in 2020",
+      "variations": [
+        "Show market cap comparison for all banks in 2020",
+        "What's the market value of each bank in 2020",
+        "Bank market capitalizations 2020",
+        "Market cap rankings 2020 banks"
+      ],
+      "sql_query": "SELECT b.BANK_NAME, AVG(md.MARKET_CAP_USD_BN) as AVG_MARKET_CAP_USD FROM MARKET_DATA md JOIN BANKS b ON md.BANK_ID = b.BANK_ID WHERE md.YEAR = 2020 GROUP BY b.BANK_NAME, b.BANK_ID ORDER BY AVG_MARKET_CAP_USD DESC",
+      "tables_used": [
+        "MARKET_DATA",
+        "BANKS"
+      ],
+      "query_type": "join_aggregation",
+      "performance_score": 0.88,
+      "usage_count": 5,
+      "last_used": "2024-01-13T09:20:00Z"
+    },
+    {
+      "id": "q_004",
+      "natural_language": "Show banks with CET1 ratio above 14%",
+      "variations": [
+        "Which banks have CET1 ratio greater than 14",
+        "Banks with strong capital adequacy above 14%",
+        "Find well-capitalized banks CET1 > 14",
+        "List banks exceeding 14% CET1 ratio"
+      ],
+      "sql_query": "SELECT DISTINCT b.BANK_NAME, md.CET1 FROM MARKET_DATA md JOIN BANKS b ON md.BANK_ID = b.BANK_ID WHERE md.CET1 > 14 ORDER BY md.CET1 DESC",
+      "tables_used": [
+        "MARKET_DATA",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.91,
+      "usage_count": 7,
+      "last_used": "2024-01-12T14:30:00Z"
+    },
+    {
+      "id": "q_005",
+      "natural_language": "What is the average deposit growth for all banks",
+      "variations": [
+        "Calculate average deposit increase across banks",
+        "Show mean deposit growth all banks",
+        "Average deposits trend for banking sector"
+      ],
+      "sql_query": "SELECT AVG((q4.DEPOSITS - q1.DEPOSITS) / q1.DEPOSITS * 100) as AVG_DEPOSIT_GROWTH FROM FINANCIAL_PERFORMANCE q1 JOIN FINANCIAL_PERFORMANCE q4 ON q1.BANK_ID = q4.BANK_ID AND q1.YEAR = q4.YEAR WHERE q1.QUARTER = 1 AND q4.QUARTER = 4",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE"
+      ],
+      "query_type": "aggregation",
+      "performance_score": 0.85,
+      "usage_count": 4,
+      "last_used": "2024-01-11T11:15:00Z"
+    },
+    {
+      "id": "q_006",
+      "natural_language": "Show quarterly profit trends for ADCB bank",
+      "variations": [
+        "ADCB quarterly profit progression",
+        "Display ADCB profit by quarter",
+        "ADCB earnings trend quarterly"
+      ],
+      "sql_query": "SELECT fp.YEAR, fp.QUARTER, fp.QUARTERLY_PROFIT FROM FINANCIAL_PERFORMANCE fp JOIN BANKS b ON fp.BANK_ID = b.BANK_ID WHERE b.BANK_NAME = 'ADCB' ORDER BY fp.YEAR, fp.QUARTER",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.93,
+      "usage_count": 6,
+      "last_used": "2024-01-10T16:45:00Z"
+    },
+    {
+      "id": "q_007",
+      "natural_language": "Which bank has the best cost-to-income ratio",
+      "variations": [
+        "Find most efficient bank by cost income ratio",
+        "Bank with lowest cost to income",
+        "Best operational efficiency bank",
+        "Top bank cost efficiency"
+      ],
+      "sql_query": "SELECT b.BANK_NAME, MIN(fp.COST_INCOME) as BEST_RATIO FROM FINANCIAL_PERFORMANCE fp JOIN BANKS b ON fp.BANK_ID = b.BANK_ID GROUP BY b.BANK_NAME ORDER BY BEST_RATIO LIMIT 1",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS"
+      ],
+      "query_type": "join_aggregation",
+      "performance_score": 0.9,
+      "usage_count": 9,
+      "last_used": "2024-01-09T13:20:00Z"
+    },
+    {
+      "id": "q_008",
+      "natural_language": "Show all banks headquartered in Dubai",
+      "variations": [
+        "List Dubai-based banks",
+        "Banks with headquarters in Dubai",
+        "Which banks are from Dubai",
+        "Dubai banks list"
+      ],
+      "sql_query": "SELECT BANK_NAME, BANK_CODE FROM BANKS WHERE HEADQUARTERS = 'Dubai'",
+      "tables_used": [
+        "BANKS"
+      ],
+      "query_type": "filter",
+      "performance_score": 0.96,
+      "usage_count": 11,
+      "last_used": "2024-01-08T10:00:00Z"
+    },
+    {
+      "id": "q_009",
+      "natural_language": "Calculate total loans for all banks in Q2 2021",
+      "variations": [
+        "Sum of loans Q2 2021 all banks",
+        "Total lending volume second quarter 2021",
+        "Aggregate loan book Q2 2021"
+      ],
+      "sql_query": "SELECT SUM(LOANS_ADVANCES) as TOTAL_LOANS FROM FINANCIAL_PERFORMANCE WHERE YEAR = 2021 AND QUARTER = 2",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE"
+      ],
+      "query_type": "aggregation",
+      "performance_score": 0.89,
+      "usage_count": 3,
+      "last_used": "2024-01-07T14:50:00Z"
+    },
+    {
+      "id": "q_010",
+      "natural_language": "Show banks with improving NIM over 2020",
+      "variations": [
+        "Banks with increasing net interest margin 2020",
+        "Which banks improved NIM in 2020",
+        "NIM improvement trend 2020"
+      ],
+      "sql_query": "SELECT b.BANK_NAME, q1.NIM as Q1_NIM, q4.NIM as Q4_NIM, (q4.NIM - q1.NIM) as NIM_CHANGE FROM FINANCIAL_PERFORMANCE q1 JOIN FINANCIAL_PERFORMANCE q4 ON q1.BANK_ID = q4.BANK_ID JOIN BANKS b ON b.BANK_ID = q1.BANK_ID WHERE q1.YEAR = 2020 AND q1.QUARTER = 1 AND q4.YEAR = 2020 AND q4.QUARTER = 4 AND q4.NIM > q1.NIM",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.87,
+      "usage_count": 5,
+      "last_used": "2024-01-06T11:30:00Z"
+    },
+    {
+      "id": "q_011",
+      "natural_language": "What is the CASA ratio for DIB bank",
+      "variations": [
+        "Show DIB CASA deposits",
+        "Dubai Islamic Bank CASA ratio",
+        "DIB current and savings account ratio"
+      ],
+      "sql_query": "SELECT fp.YEAR, fp.QUARTER, fp.CASA, fp.DEPOSITS, (fp.CASA / fp.DEPOSITS * 100) as CASA_RATIO FROM FINANCIAL_PERFORMANCE fp JOIN BANKS b ON fp.BANK_ID = b.BANK_ID WHERE b.BANK_NAME = 'DIB' ORDER BY fp.YEAR DESC, fp.QUARTER DESC",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.94,
+      "usage_count": 7,
+      "last_used": "2024-01-05T15:20:00Z"
+    },
+    {
+      "id": "q_012",
+      "natural_language": "Compare share prices of all banks in Q3 2022",
+      "variations": [
+        "Bank stock prices third quarter 2022",
+        "Share price comparison Q3 2022",
+        "Stock values all banks Q3 2022"
+      ],
+      "sql_query": "SELECT b.BANK_NAME, md.SHARE_PRICE FROM MARKET_DATA md JOIN BANKS b ON md.BANK_ID = b.BANK_ID WHERE md.YEAR = 2022 AND md.QUARTER = 3 ORDER BY md.SHARE_PRICE DESC",
+      "tables_used": [
+        "MARKET_DATA",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.91,
+      "usage_count": 4,
+      "last_used": "2024-01-04T12:45:00Z"
+    },
+    {
+      "id": "q_013",
+      "natural_language": "Show banks with PE ratio below 10",
+      "variations": [
+        "Banks trading below 10x earnings",
+        "Low PE ratio banks under 10",
+        "Undervalued banks PE < 10"
+      ],
+      "sql_query": "SELECT DISTINCT b.BANK_NAME, md.PE_RATIO FROM MARKET_DATA md JOIN BANKS b ON md.BANK_ID = b.BANK_ID WHERE md.PE_RATIO < 10 ORDER BY md.PE_RATIO",
+      "tables_used": [
+        "MARKET_DATA",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.88,
+      "usage_count": 6,
+      "last_used": "2024-01-03T09:30:00Z"
+    },
+    {
+      "id": "q_014",
+      "natural_language": "Calculate average ROE for banking sector",
+      "variations": [
+        "Mean return on equity all banks",
+        "Banking sector average ROE",
+        "What's the average ROTE for banks"
+      ],
+      "sql_query": "SELECT AVG(ROTE) as AVG_RETURN_ON_EQUITY FROM FINANCIAL_PERFORMANCE WHERE YEAR = 2023",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE"
+      ],
+      "query_type": "aggregation",
+      "performance_score": 0.92,
+      "usage_count": 8,
+      "last_used": "2024-01-02T14:15:00Z"
+    },
+    {
+      "id": "q_015",
+      "natural_language": "Show risk-weighted assets for FAB bank",
+      "variations": [
+        "FAB RWA values",
+        "First Abu Dhabi Bank risk weighted assets",
+        "Display FAB's RWA"
+      ],
+      "sql_query": "SELECT md.YEAR, md.QUARTER, md.RWA FROM MARKET_DATA md JOIN BANKS b ON md.BANK_ID = b.BANK_ID WHERE b.BANK_NAME = 'FAB' ORDER BY md.YEAR, md.QUARTER",
+      "tables_used": [
+        "MARKET_DATA",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.93,
+      "usage_count": 5,
+      "last_used": "2024-01-01T11:00:00Z"
+    },
+    {
+      "id": "q_016",
+      "natural_language": "Which bank has highest market cap in USD",
+      "variations": [
+        "Largest bank by market capitalization USD",
+        "Top bank market value in dollars",
+        "Biggest bank by market cap USD"
+      ],
+      "sql_query": "SELECT b.BANK_NAME, MAX(md.MARKET_CAP_USD_BN) as MAX_MARKET_CAP FROM MARKET_DATA md JOIN BANKS b ON md.BANK_ID = b.BANK_ID GROUP BY b.BANK_NAME ORDER BY MAX_MARKET_CAP DESC LIMIT 1",
+      "tables_used": [
+        "MARKET_DATA",
+        "BANKS"
+      ],
+      "query_type": "join_aggregation",
+      "performance_score": 0.9,
+      "usage_count": 10,
+      "last_used": "2023-12-31T16:30:00Z"
+    },
+    {
+      "id": "q_017",
+      "natural_language": "Show quarterly income trends for all banks",
+      "variations": [
+        "Income progression by quarter all banks",
+        "Quarterly revenue trends banking sector",
+        "All banks income by quarter"
+      ],
+      "sql_query": "SELECT b.BANK_NAME, fp.YEAR, fp.QUARTER, fp.YTD_INCOME FROM FINANCIAL_PERFORMANCE fp JOIN BANKS b ON fp.BANK_ID = b.BANK_ID ORDER BY b.BANK_NAME, fp.YEAR, fp.QUARTER",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.86,
+      "usage_count": 3,
+      "last_used": "2023-12-30T13:45:00Z"
+    },
+    {
+      "id": "q_018",
+      "natural_language": "Find banks with cost of risk above 1.5",
+      "variations": [
+        "Banks with high COR > 1.5",
+        "Which banks have cost of risk over 1.5",
+        "High provision banks COR above 1.5"
+      ],
+      "sql_query": "SELECT DISTINCT b.BANK_NAME, fp.COR FROM FINANCIAL_PERFORMANCE fp JOIN BANKS b ON fp.BANK_ID = b.BANK_ID WHERE fp.COR > 1.5 ORDER BY fp.COR DESC",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.89,
+      "usage_count": 4,
+      "last_used": "2023-12-29T10:20:00Z"
+    },
+    {
+      "id": "q_019",
+      "natural_language": "Show Stage 3 coverage ratios for 2023",
+      "variations": [
+        "Stage 3 loan coverage 2023",
+        "Impaired loan provisions 2023",
+        "NPL coverage ratios 2023"
+      ],
+      "sql_query": "SELECT b.BANK_NAME, fp.QUARTER, fp.STAGE3_COVER FROM FINANCIAL_PERFORMANCE fp JOIN BANKS b ON fp.BANK_ID = b.BANK_ID WHERE fp.YEAR = 2023 ORDER BY b.BANK_NAME, fp.QUARTER",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.91,
+      "usage_count": 5,
+      "last_used": "2023-12-28T14:55:00Z"
+    },
+    {
+      "id": "q_020",
+      "natural_language": "Compare PB ratios across all banks",
+      "variations": [
+        "Price to book ratios comparison",
+        "Bank valuations by PB ratio",
+        "All banks price-to-book comparison"
+      ],
+      "sql_query": "SELECT b.BANK_NAME, AVG(md.PB_RATIO) as AVG_PB_RATIO FROM MARKET_DATA md JOIN BANKS b ON md.BANK_ID = b.BANK_ID GROUP BY b.BANK_NAME ORDER BY AVG_PB_RATIO DESC",
+      "tables_used": [
+        "MARKET_DATA",
+        "BANKS"
+      ],
+      "query_type": "join_aggregation",
+      "performance_score": 0.87,
+      "usage_count": 6,
+      "last_used": "2023-12-27T11:40:00Z"
+    },
+    {
+      "id": "q_021",
+      "natural_language": "Show me all banks with their market cap",
+      "variations": [],
+      "sql_query": "SELECT B.BANK_ID, B.BANK_NAME, M.MARKET_CAP_AED_BN, M.MARKET_CAP_USD_BN\nFROM BANKS B\nJOIN MARKET_DATA M ON B.BANK_ID = M.BANK_ID\nGROUP BY B.BANK_ID, B.BANK_NAME, M.MARKET_CAP_AED_BN, M.MARKET_CAP_USD_BN;",
+      "tables_used": [
+        "BANKS",
+        "MARKET_DATA",
+        "FINANCIAL_PERFORMANCE"
+      ],
+      "query_type": "join_aggregation",
+      "performance_score": 0.0,
+      "usage_count": 2,
+      "last_used": "2025-10-22T23:26:57.347259"
+    },
+    {
+      "id": "q_022",
+      "natural_language": "What is the average NPL ratio for banks in Q4 2020?",
+      "variations": [],
+      "sql_query": "SELECT AVG(NPL_RATIO) AS average_npl_ratio\nFROM FINANCIAL_PERFORMANCE\nWHERE YEAR = 2020 AND QUARTER = 4;",
+      "tables_used": [
+        "BANKS",
+        "MARKET_DATA",
+        "FINANCIAL_PERFORMANCE"
+      ],
+      "query_type": "filter",
+      "performance_score": 0.0,
+      "usage_count": 1,
+      "last_used": "2025-10-22T23:17:09.205723"
+    },
+    {
+      "id": "q_023",
+      "natural_language": "Get financial performance of Mashreq bank",
+      "variations": [],
+      "sql_query": "SELECT \n    b.BANK_NAME,\n    b.BANK_CODE,\n    b.ESTABLISHED_DATE,\n    b.HEADQUARTERS,\n    f.YEAR,\n    f.QUARTER,\n    f.YTD_INCOME,\n    f.YTD_PROFIT,\n    f.QUARTERLY_PROFIT,\n    f.LOANS_ADVANCES,\n    f.NIM,\n    f.DEPOSITS,\n    f.CASA,\n    f.COST_INCOME,\n    f.NPL_RATIO,\n    f.COR,\n    f.STAGE3_COVER,\n    f.ROTE,\n    m.CET1,\n    m.CET_CAPITAL,\n    m.RWA,\n    m.SHARE_PRICE,\n    m.MARKET_CAP_AED_BN,\n    m.MARKET_CAP_USD_BN,\n    m.PE_RATIO,\n    m.PB_RATIO\nFROM \n    BANKS b\nJOIN \n    FINANCIAL_PERFORMANCE f ON b.BANK_ID = f.BANK_ID\nJOIN \n    MARKET_DATA m ON b.BANK_ID = m.BANK_ID\nWHERE \n    b.BANK_NAME = 'Mashreq'\nORDER BY \n    f.YEAR, f.QUARTER;",
+      "tables_used": [
+        "MARKET_DATA",
+        "BANKS",
+        "FINANCIAL_PERFORMANCE"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.0,
+      "usage_count": 2,
+      "last_used": "2025-10-23T10:46:47.536628"
+    },
+    {
+      "id": "q_024",
+      "natural_language": "Which bank has the highest deposits?",
+      "variations": [],
+      "sql_query": "SELECT B.BANK_NAME, SUM(F.DEPOSITS) AS TOTAL_DEPOSITS\nFROM BANKS B\nJOIN FINANCIAL_PERFORMANCE F ON B.BANK_ID = F.BANK_ID\nGROUP BY B.BANK_NAME\nORDER BY TOTAL_DEPOSITS DESC\nFETCH FIRST 1 ROW ONLY;",
+      "tables_used": [
+        "BANKS",
+        "MARKET_DATA",
+        "FINANCIAL_PERFORMANCE"
+      ],
+      "query_type": "join_aggregation",
+      "performance_score": 0.0,
+      "usage_count": 1,
+      "last_used": "2025-10-22T23:19:08.127197"
+    },
+    {
+      "id": "q_025",
+      "natural_language": "Show banks with CET1 ratio above 14%",
+      "variations": [],
+      "sql_query": "SELECT B.BANK_ID, B.BANK_NAME, M.CET1\nFROM BANKS B\nJOIN MARKET_DATA M ON B.BANK_ID = M.BANK_ID\nWHERE M.CET1 > 14;",
+      "tables_used": [
+        "BANKS",
+        "MARKET_DATA",
+        "FINANCIAL_PERFORMANCE"
+      ],
+      "query_type": "join_filter",
+      "performance_score": 0.0,
+      "usage_count": 2,
+      "last_used": "2025-10-22T23:26:57.371221"
+    },
+    {
+      "id": "q_026",
+      "natural_language": "Show weather data",
+      "variations": [],
+      "sql_query": "SELECT * FROM WEATHER_DATA;",
+      "tables_used": [
+        "PRODUCTS",
+        "WEATHER_DATA",
+        "VEHICLES"
+      ],
+      "query_type": "simple_select",
+      "performance_score": 0.0,
+      "usage_count": 1,
+      "last_used": "2025-10-22T23:26:59.173851"
+    },
+    {
+      "id": "q_027",
+      "natural_language": "Find restaurants with high ratings",
+      "variations": [],
+      "sql_query": "SELECT RESTAURANT_NAME, RATING \nFROM RESTAURANTS \nWHERE RATING >= 4.0 \nORDER BY RATING DESC;",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "PRODUCTS",
+        "RESTAURANTS",
+        "BANKS"
+      ],
+      "query_type": "filter",
+      "performance_score": 0.0,
+      "usage_count": 1,
+      "last_used": "2025-10-22T23:27:01.000771"
+    },
+    {
+      "id": "q_028",
+      "natural_language": "Show vehicle information",
+      "variations": [],
+      "sql_query": "SELECT VEHICLE_ID, MAKE, MODEL, YEAR, LICENSE_PLATE \nFROM VEHICLES;",
+      "tables_used": [
+        "WEATHER_DATA",
+        "PRODUCTS",
+        "VEHICLES"
+      ],
+      "query_type": "simple_select",
+      "performance_score": 0.0,
+      "usage_count": 1,
+      "last_used": "2025-10-22T23:27:03.850100"
+    },
+    {
+      "id": "q_029",
+      "natural_language": "Show all banks",
+      "variations": [],
+      "sql_query": "SELECT * FROM BANKS;",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS",
+        "MARKET_DATA"
+      ],
+      "query_type": "generated",
+      "performance_score": 0.0,
+      "usage_count": 1,
+      "last_used": "2025-10-23T10:46:15.780551"
+    },
+    {
+      "id": "q_030",
+      "natural_language": "Which banks have NPL ratio above 4%?",
+      "variations": [],
+      "sql_query": "SELECT B.BANK_NAME \nFROM BANKS B \nJOIN FINANCIAL_PERFORMANCE FP ON B.BANK_ID = FP.BANK_ID \nWHERE FP.NPL_RATIO > 4;",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS",
+        "MARKET_DATA"
+      ],
+      "query_type": "generated",
+      "performance_score": 0.0,
+      "usage_count": 1,
+      "last_used": "2025-10-23T10:46:36.950468"
+    },
+    {
+      "id": "q_031",
+      "natural_language": "Get market capitalization for all banks",
+      "variations": [],
+      "sql_query": "SELECT B.BANK_NAME, M.MARKET_CAP_AED_BN, M.MARKET_CAP_USD_BN\nFROM BANKS B\nJOIN MARKET_DATA M ON B.BANK_ID = M.BANK_ID;",
+      "tables_used": [
+        "FINANCIAL_PERFORMANCE",
+        "BANKS",
+        "MARKET_DATA"
+      ],
+      "query_type": "generated",
+      "performance_score": 0.0,
+      "usage_count": 1,
+      "last_used": "2025-10-23T10:46:58.009583"
+    }
+  ]
+}
