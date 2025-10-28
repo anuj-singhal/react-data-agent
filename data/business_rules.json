@@ -1,0 +1,18 @@
+{
+  "business_rules": [
+    {
+        "id": "BR001",
+        "name": "NIM Calculation",
+        "rule": "Net Interest Margin must be calculated as (Interest Income - Interest Expense) / Average Earning Assets",
+        "active": true,
+        "created_date": "2024-01-01"
+    },
+    {
+        "id": "BR002",
+        "name": "ROE Threshold",
+        "rule": "Return on Equity should be flagged if below 10% or above 25%",
+        "active": true,
+        "created_date": "2024-01-01"
+    }
+  ]
+}

@@ -1,5 +1,6 @@
 """
 RAG System - Handles all retrieval and context building
+Enhanced with query history similarity matching
 """
 
 from sentence_transformers import SentenceTransformer
@@ -9,9 +10,13 @@ import networkx as nx
 import numpy as np
 from typing import List, Dict, Any, Set, Optional, Tuple
 from datetime import datetime
+from colorama import Fore, Style
 from .rag_config import (
     RAGConfig, DataLoader, Table, Relationship, QueryHistory
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RAGSystem:
@@ -21,6 +26,8 @@ class RAGSystem:
                  data_dict_path: str = None,
                  relationships_path: str = None,
                  query_history_path: str = None,
+                 business_rules_path: str = None,
+                 sql_rules_path: str = None,
                  use_sample_values: bool = True):
         
         self.config = RAGConfig()
@@ -30,7 +37,8 @@ class RAGSystem:
         self.data_dict_path = data_dict_path or self.config.DEFAULT_DATA_DICT_PATH
         self.relationships_path = relationships_path or self.config.DEFAULT_RELATIONSHIPS_PATH
         self.query_history_path = query_history_path or self.config.DEFAULT_QUERY_HISTORY_PATH
-        
+        self.business_rules_path = business_rules_path or self.config.DEFAULT_BUSINESS_RULES_PATH
+        self.sql_rules_path = sql_rules_path or self.config.DEFAULT_SQL_RULES_PATH
         
     def initialize_rag(self):
         # Initialize RAG components
@@ -38,7 +46,11 @@ class RAGSystem:
         self._load_data()
         self._index_data()
         return True
-
+        # # Initialize components
+        # self._initialize_components()
+        # self._load_data()
+        # self._index_data()
+    
     def _initialize_components(self):
         """Initialize RAG components"""
         # Initialize embedding model
@@ -73,6 +85,8 @@ class RAGSystem:
         self.tables = DataLoader.load_data_dictionary(self.data_dict_path)
         self.relationships = DataLoader.load_relationships(self.relationships_path)
         self.query_history = DataLoader.load_query_history(self.query_history_path)
+        self.business_rules = DataLoader.load_rules(self.business_rules_path, "business_rules")
+        self.sql_rules = DataLoader.load_rules(self.sql_rules_path, "sql_rules")
         
         # Build graph
         self._build_graph()
@@ -80,8 +94,9 @@ class RAGSystem:
         # Store tables dict for quick access
         self.tables_dict = {table.table_name: table for table in self.tables}
         
-        print(f"Loaded {len(self.tables)} tables, {len(self.relationships)} relationships")
-    
+        print(f"Loaded {len(self.tables)} tables, {len(self.relationships)} relationships, {len(self.query_history)} historical queries")
+        print(f"Loaded {len(self.business_rules)} business rules, {len(self.sql_rules)} SQL Rules")
+
     def _build_graph(self):
         """Build relationship graph"""
         # Add nodes
@@ -164,13 +179,91 @@ class RAGSystem:
         if not self.query_history:
             return
         
-        all_texts = []
-        for query in self.query_history:
-            texts = [query.natural_language] + query.variations
-            all_texts.append(" | ".join(texts))
+        # Create separate embeddings for each query and its variations
+        self.query_texts = []
+        self.query_embeddings_list = []
+        self.query_mapping = []  # Maps embedding index to query index
         
-        if all_texts:
-            self.query_embeddings = self.embedding_model.encode(all_texts)
+        for query_idx, query in enumerate(self.query_history):
+            # Add natural language
+            self.query_texts.append(query.natural_language)
+            self.query_mapping.append(query_idx)
+            
+            # Add each variation
+            for variation in query.variations:
+                self.query_texts.append(variation)
+                self.query_mapping.append(query_idx)
+        
+        if self.query_texts:
+            print(f"  Indexing {len(self.query_texts)} query texts from {len(self.query_history)} queries")
+            self.query_embeddings = self.embedding_model.encode(self.query_texts)
+    
+       
+    def check_query_history(self, query: str) -> Optional[Dict[str, Any]]:
+        """
+        Check if a similar query exists in history
+        """
+        try:
+            # Look for similar queries with 90% threshold
+            similar = self._find_similar_query_enhanced(query, threshold=0.90)
+            return similar
+        except Exception as e:
+            logger.error(f"Query history check failed: {e}")
+            return None
+    
+
+
+    def _find_similar_query_enhanced(self, query: str, threshold: float = 0.90) -> Optional[Dict[str, Any]]:
+        """
+        Enhanced query similarity matching with 90% threshold
+        Returns the matched query with similarity score
+        """
+        if not self.query_history or self.query_embeddings is None:
+            logger.info("No query history available for matching")
+            return None
+        
+        print(f"\n{Fore.BLUE}🔍 Searching query history...{Style.RESET_ALL}")
+        
+        # Encode the input query
+        query_embedding = self.embedding_model.encode([query])
+        
+        # Calculate similarities with all historical queries (including variations)
+        similarities = np.dot(self.query_embeddings, query_embedding.T).flatten()
+        
+        # Find best match
+        best_idx = np.argmax(similarities)
+        best_score = similarities[best_idx]
+        
+        # Get the actual query (not variation) index
+        query_idx = self.query_mapping[best_idx]
+        matched_text = self.query_texts[best_idx]
+        
+        print(f"  Best match: {best_score:.2%} similarity")
+        print(f"  Matched text: '{matched_text[:50]}...'")
+        print(f"  Threshold: {threshold:.2%}")
+        
+        # Check if similarity exceeds threshold
+        if best_score >= threshold:
+            matched_query = self.query_history[query_idx]
+            
+            print(f"{Fore.GREEN}  ✓ Match found! Query ID: {matched_query.id}{Style.RESET_ALL}")
+            logger.info(f"Found similar query with {best_score:.2%} similarity")
+            
+            return {
+                'matched_query': matched_query,
+                'similarity_score': float(best_score),
+                'query_id': matched_query.id,
+                'natural_language': matched_query.natural_language,
+                'sql_query': matched_query.sql_query,
+                'validation_result': matched_query.validation_result,
+                'overall_confidence': getattr(matched_query, 'overall_confidence', None),
+                'variations': matched_query.variations,
+                'matched_text': matched_text
+            }
+        else:
+            print(f"{Fore.YELLOW}  ✗ No match (below threshold){Style.RESET_ALL}")
+        
+        return None
     
     def search_relevant_tables(self, query: str) -> Dict[str, Any]:
         """Search for relevant tables and columns"""
@@ -245,45 +338,47 @@ class RAGSystem:
                 }
         return sample_values
     
-    def find_similar_query(self, query: str) -> Optional[Tuple[QueryHistory, float]]:
-        """Find similar query in history"""
-        if not self.query_history or self.query_embeddings is None:
-            return None
+    def add_validated_query_to_history(self, 
+                                      nl_query: str, 
+                                      sql_query: str, 
+                                      validation_result: Dict[str, Any],
+                                      overall_confidence: float,
+                                      variations: List[str] = None) -> Optional[QueryHistory]:
+        """
+        Add validated query to history with validation results
+        Only add if overall confidence is > 90%
+        """
+        # Check confidence threshold
+        # if overall_confidence <= 90:
+        #     print(f"{Fore.YELLOW}  ℹ Query not added to history (confidence {overall_confidence}% <= 90%){Style.RESET_ALL}")
+        #     logger.info(f"Query not cached due to low confidence: {overall_confidence}%")
+        #     return None
         
-        query_embedding = self.embedding_model.encode([query])
-        similarities = np.dot(self.query_embeddings, query_embedding.T).flatten()
+        # Generate ID
+        query_id = f"q_{len(self.query_history) + 1:03d}"
         
-        best_idx = np.argmax(similarities)
-        best_score = similarities[best_idx]
-        
-        if best_score >= self.config.SIMILARITY_THRESHOLD:
-            matched_query = self.query_history[best_idx]
-            matched_query.usage_count += 1
-            matched_query.last_used = datetime.now().isoformat()
-            return matched_query, best_score
-        
-        return None
-    
-    def add_query_to_history(self, nl_query: str, sql_query: str, tables_used: List[str]):
-        """Add new query to history"""
+        # Create new query entry
         new_query = QueryHistory(
-            id=f"q_{len(self.query_history) + 1:03d}",
+            id=query_id,
             natural_language=nl_query,
-            variations=[],
+            variations=variations or [],
             sql_query=sql_query,
-            tables_used=tables_used,
-            query_type="generated",
-            performance_score=0.0,
-            usage_count=1,
+            validation_result=validation_result,
+            overall_confidence=overall_confidence,
             last_used=datetime.now().isoformat()
         )
         
+        # Add to history
         self.query_history.append(new_query)
+        
+        # Save to file
         DataLoader.save_query_history(self.query_history_path, self.query_history)
         
-        # Re-index
+        # Re-index for future similarity searches
         self._index_query_history()
         
+        print(f"{Fore.GREEN}  ✓ Query added to history (ID: {query_id}, Confidence: {overall_confidence}%){Style.RESET_ALL}")
+        logger.info(f"Added validated query to history: {query_id}")
         return new_query
     
     def build_context(self, tables: List[str], user_query: str) -> Dict[str, Any]:
@@ -292,7 +387,9 @@ class RAGSystem:
             'user_query': user_query,
             'tables': {},
             'relationships': [],
-            'sample_values': {}
+            'sample_values': {},
+            'business_rules': [],
+            'sql_rules': [],
         }
         
         # Add table information
@@ -336,7 +433,22 @@ class RAGSystem:
                     'description': rel.description
                 })
         
+        # Add business rules
+        for rul in self.business_rules:
+            context['business_rules'].append({
+                'name': rul.name,
+                'rule': rul.rule,
+                'active': rul.active
+            })
+
+        # Add SQL rules
+        for rul in self.sql_rules:
+            context['sql_rules'].append({
+                'name': rul.name,
+                'rule': rul.rule,
+                'active': rul.active
+            })
+        
         return context
     
-# Singleton instance
-rag_agent = RAGSystem()
+rag_agent = RAGSystem()    

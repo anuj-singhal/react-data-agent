@@ -1,9 +1,10 @@
 """
 RAG Configuration and Data Models
+Enhanced with validation result support
 """
 
 from dataclasses import dataclass, field
-from typing import List, Any, Optional
+from typing import List, Any, Optional, Dict
 import json
 
 
@@ -60,6 +61,13 @@ class Relationship:
     relationship_type: str
     description: str
 
+@dataclass
+class Rules:
+    id: str
+    name: str
+    rule: str
+    active: str
+    created_date: str
 
 @dataclass
 class QueryHistory:
@@ -67,11 +75,19 @@ class QueryHistory:
     natural_language: str
     variations: List[str]
     sql_query: str
-    tables_used: List[str]
-    query_type: str
-    performance_score: float = 0.0
-    usage_count: int = 0
+    validation_result: Optional[Dict[str, Any]] = None
+    overall_confidence: Optional[float] = None
     last_used: Optional[str] = None
+    
+    def __post_init__(self):
+        """Ensure validation_result has the right structure"""
+        if self.validation_result is None:
+            self.validation_result = {
+                'schema': 0,
+                'syntax': 0,
+                'semantic': 0,
+                'completeness': 0
+            }
 
 
 # ========================= Configuration =========================
@@ -81,7 +97,7 @@ class RAGConfig:
     
     # Model settings
     EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-    SIMILARITY_THRESHOLD = 0.85
+    SIMILARITY_THRESHOLD = 0.90  # Updated to 90% for query history matching
     
     # Search settings
     TOP_K_TABLES = 3
@@ -100,6 +116,8 @@ class RAGConfig:
     DEFAULT_DATA_DICT_PATH = "./data/data_dictionary.json"
     DEFAULT_RELATIONSHIPS_PATH = "./data/relationships.json"
     DEFAULT_QUERY_HISTORY_PATH = "./data/query_history.json"
+    DEFAULT_BUSINESS_RULES_PATH = "./data/business_rules.json"
+    DEFAULT_SQL_RULES_PATH = "./data/sql_generation_rules.json"
 
 
 # ========================= Data Loader =========================
@@ -130,11 +148,34 @@ class DataLoader:
         return [Relationship(**rel) for rel in data['relationships']]
     
     @staticmethod
+    def load_rules(file_path: str, rule_type:str) -> List[Rules]:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+
+        return [Rules(**rul) for rul in data[rule_type]]
+
+    @staticmethod
     def load_query_history(file_path: str) -> List[QueryHistory]:
         try:
             with open(file_path, 'r') as f:
                 data = json.load(f)
-            return [QueryHistory(**query) for query in data['queries']]
+            
+            queries = []
+            for query_data in data['queries']:
+                # Handle validation_result field
+                validation_result = query_data.get('validation_result', {})
+                
+                queries.append(QueryHistory(
+                    id=query_data['id'],
+                    natural_language=query_data['natural_language'],
+                    variations=query_data.get('variations', []),
+                    sql_query=query_data['sql_query'],
+                    validation_result=validation_result,
+                    overall_confidence=query_data.get('overall_confidence'),
+                    last_used=query_data.get('last_used')
+                ))
+            
+            return queries
         except FileNotFoundError:
             return []
     
@@ -147,10 +188,8 @@ class DataLoader:
                     'natural_language': q.natural_language,
                     'variations': q.variations,
                     'sql_query': q.sql_query,
-                    'tables_used': q.tables_used,
-                    'query_type': q.query_type,
-                    'performance_score': q.performance_score,
-                    'usage_count': q.usage_count,
+                    'validation_result': q.validation_result,
+                    'overall_confidence': q.overall_confidence,
                     'last_used': q.last_used
                 } for q in queries
             ]

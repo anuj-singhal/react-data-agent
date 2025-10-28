@@ -30,10 +30,10 @@ class LLMQueryGenerator:
             self.model = None
             self.client = None
     
-    async def generate_sql(self, context: Dict[str, Any], previous_message = None, last_sql = None) -> str:
+    async def generate_sql(self, context: Dict[str, Any], intent, previous_message = None, last_sql = None) -> str:
         """Generate SQL based on context"""
         if self.provider == "openai" and self.client:
-            if(previous_message):
+            if(intent == "modify"):
                 return await self._generate_openai_modify_sql(context, previous_message, last_sql)
             else:
                 return await self._generate_openai_sql(context)
@@ -100,6 +100,7 @@ class LLMQueryGenerator:
             print(f"Error with OpenAI: {e}")
             return self._generate_heuristic_sql(context)
     
+
     async def _generate_heuristic_sql(self, context: Dict[str, Any]) -> str:
         """Generate SQL using heuristics when LLM is not available"""
         tables = list(context['tables'].keys())
@@ -227,6 +228,22 @@ DATABASE SCHEMA:
             for rel in context['relationships']:
                 prompt += f"\n- {rel['from']} -> {rel['to']} ({rel['type']})"
         
+        # Add Business Rules
+        if context['business_rules']:
+            prompt += "\n\BUSINESS RULES:"
+            for rul in context['business_rules']:
+                if(rul["active"]):
+                    prompt += f"\n- Rule Name: {rul['name']}"
+                    prompt += f"\n- Rule to Apply : {rul['rule']}"
+
+        # Add SQL Rules
+        if context['sql_rules']:
+            prompt += "\n\SQL GENERATION RULES:"
+            for rul in context['sql_rules']:
+                if(rul["active"]):
+                    prompt += f"\n- Rule Name: {rul['name']}"
+                    prompt += f"\n- Rule to Apply : {rul['rule']}"
+
         prompt += "\n\nGenerate only the SQL query:"
         
         return prompt

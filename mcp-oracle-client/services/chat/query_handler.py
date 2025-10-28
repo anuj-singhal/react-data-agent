@@ -4,11 +4,16 @@ import logging
 from typing import Dict, Optional
 from config.settings import settings
 from models.chat import ConversationContext, ChatResponse
-from services.sql_converter_agent.llm_generator import sql_converter
+#from services.sql_converter_agent.llm_generator import sql_converter_bkp
+from services.sql_converter_agent.llm_interface import sql_converter
+from services.sql_validator_agent.sql_query_validator import sql_validator
 from services.query_executor import query_executor
 from services.mcp_client import mcp_client
 from services.rag_agent.rag_system import rag_agent
 from .utils import clean_sql_query, extract_query_from_execute_command, is_simple_confirmation
+from typing import Dict, Any, Optional, List
+from datetime import datetime
+from colorama import Fore, Style
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +34,77 @@ class QueryHandler:
             self.llm = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
             logger.info("OpenAI client initialized for query handling")
     
-    async def generate_query(self, message: str, session_id: str, 
+    async def _check_needs_decomposition(self, query: str) -> bool:
+        """Check if query needs decomposition"""
+        try:
+            return await self.llm_interface.check_complexity(query)
+        except:
+            return False
+        
+    async def _verify_sql_reuse(self, current_query: str, similar_query: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ask LLM if the historical SQL can be reused for current query
+        """
+        print(f"\n{Fore.CYAN}🤔 Verifying if cached SQL can be reused...{Style.RESET_ALL}")
+        print(f"  Original: '{similar_query['natural_language'][:60]}...'")
+        print(f"  Current:  '{current_query[:60]}...'")
+        
+        prompt = f"""
+        Determine if an existing SQL query can be reused for a new request.
+        
+        ORIGINAL QUERY: {similar_query['natural_language']}
+        ORIGINAL SQL: {similar_query['sql_query']}
+        
+        NEW QUERY: {current_query}
+        
+        Analyze if the SQL can be reused as-is or needs modification.
+        Consider:
+        1. Are the entities (tables, columns) the same?
+        2. Are the filters/conditions equivalent?
+        3. Is the aggregation/grouping the same?
+        4. Is the time period the same or compatible?
+        
+        Return JSON:
+        {{
+            "can_reuse": true/false,
+            "reason": "explanation",
+            "confidence": 0-100
+        }}
+        """
+        
+        try:
+            response = await sql_converter.analyze_query_similarity(prompt)
+            
+            # Parse response
+            if isinstance(response, dict):
+                can_reuse = response.get('can_reuse', False)
+                reason = response.get('reason', '')
+                confidence = response.get('confidence', 0)
+                
+                if can_reuse:
+                    print(f"{Fore.GREEN}  ✓ SQL can be reused (confidence: {confidence}%){Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.YELLOW}  ✗ SQL needs regeneration: {reason}{Style.RESET_ALL}")
+                
+                return response
+            else:
+                # Default to not reusing if parsing fails
+                print(f"{Fore.YELLOW}  ✗ Unable to verify similarity{Style.RESET_ALL}")
+                return {
+                    "can_reuse": False,
+                    "reason": "Unable to determine similarity",
+                    "confidence": 0
+                }
+        except Exception as e:
+            logger.error(f"SQL reuse verification failed: {e}")
+            print(f"{Fore.RED}  ✗ Verification failed: {e}{Style.RESET_ALL}")
+            return {
+                "can_reuse": False,
+                "reason": str(e),
+                "confidence": 0
+            }
+    
+    async def generate_query(self, message: str, session_id: str, intent,
                              p_context) -> ChatResponse:
         """
         Generate SQL query from natural language.
@@ -51,33 +126,69 @@ class QueryHandler:
                 message = rag_messages
 
             # Step 1: Check query history for similar queries
-            cached_result = rag_agent.find_similar_query(message)
-            sql_query = None
-            if cached_result:
-                query, similarity = cached_result
-                print(f"Found cached query with similarity: {similarity:.2f}")
+            #cached_result = rag_agent.find_similar_query(message)
+            cached_result = rag_agent.check_query_history(message)
+            can_reuse = False
+
+            if(cached_result):
+                query = cached_result["matched_query"]
+                can_reuse = await self._verify_sql_reuse(message, cached_result)
+
+            if can_reuse:
+                query = cached_result["matched_query"]
+                #print(f"Found cached query with similarity: {cached_result["similarity_score"]:.2f}")
                 cached_dict = {
                     'sql': query.sql_query,
-                    'tables': query.tables_used,
                     'source': 'cache',
-                    'similarity_score': similarity,
+                    'similarity_score': cached_result["similarity_score"],
                     'query_id': query.id
                 }
                 sql_query = query.sql_query
                 print(cached_dict)
+
             else:
                 # Generate SQL from natural language
                 # Step 2: Find relevant tables using RAG
                 search_results = rag_agent.search_relevant_tables(message)
                 tables = search_results['tables']
-                
+
                 print(f"Identified tables: {tables}")
                 # Step 3: Build context for LLM
                 context = rag_agent.build_context(tables, message)
                 # Step 4: Generate SQL using LLM
-                sql_query = await sql_converter.generate_sql(context, previous_messages, last_sql)
+                # Check complexity
+
+                needs_decomposition = await self._check_needs_decomposition(message)
+                
+                if not needs_decomposition:
+                    # Simple query
+                    # result = await self._process_simple_with_validation(
+                    #     enhanced_query, query, context, None
+                    # )
+                    print("Simple Query Processing...")
+                else:
+                    # Complex query
+                    # result = await self._process_complex_with_validation(
+                    #     enhanced_query, query, context, suggestions
+                    # )
+                    print("Complex Query Processing...")
+
+                sql_query = await sql_converter.generate_sql(context, intent,  previous_messages, last_sql)
                 sql_query = clean_sql_query(sql_query)
 
+                syntax_validator = await sql_validator.validate_sql(message, sql_query, context)
+                
+                # sql_validation = SQLValidator(context)
+                # overall_validation_result = await sql_validation.validate_sql(message, sql_query)
+
+                # Add query to query_history if validated
+                rag_agent.add_validated_query_to_history(
+                        nl_query=message,
+                        sql_query=sql_query,
+                        validation_result=None,
+                        overall_confidence=None,
+                        variations=[]
+                    )
                 # sql_query = await sql_converter.convert_to_sql(message, intent_dict, mcp_client.tools)
                 
             

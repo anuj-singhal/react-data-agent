@@ -1,0 +1,18 @@
+{
+  "sql_rules": [
+    {
+        "id": "SR001",
+        "name": "NIM Query Enhancement",
+        "rule": "When user mentions 'NIM', also include: net_interest_income, interest_income, interest_expense, average_earning_assets",
+        "active": true,
+        "created_date": "2024-01-01"
+    },
+    {
+        "id": "SR003",
+        "name": "Yearly Aggregation",
+        "rule": "When user asks for yearly data, group the data based on year",
+        "active": true,
+        "created_date": "2025-10-15"
+    }
+  ]
+}

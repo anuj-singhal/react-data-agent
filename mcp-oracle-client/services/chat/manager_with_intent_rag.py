@@ -65,17 +65,21 @@ class ChatManagerWithIntent(ChatManager):
         if intent == "follow_up":
             response = await self._handle_follow_up(session_id, message, context)
         elif intent == "modify_query":
-            response = await self._handle_new_query_with_intent_rag(session_id, message, context)
+            response = await self._handle_new_query_with_intent_rag(session_id, message, intent, context)
         elif intent == "execute_immediately":
             response = await self._handle_execute_immediately(session_id, message, context)
         else:  # new_query
             # Try enhanced query generation if we have semantic intent
+            self.context_manager.clear_session(session_id)
+            context = self.context_manager.ensure_session(session_id)
+            self.context_manager.add_message(session_id, "user", message)
+            
             if semantic_intent:
                 response = await self._handle_new_query_with_intent_rag(
-                    session_id, message, context, semantic_intent
+                    session_id, message, intent, context, semantic_intent
                 )
             else:
-                response = await self._handle_new_query(session_id, message, context)
+                response = await self._handle_new_query(session_id, message, intent, context)
         
         # Add assistant response to history (as before)
         self.context_manager.add_message(
@@ -97,7 +101,7 @@ class ChatManagerWithIntent(ChatManager):
         
         return response
     
-    async def _handle_new_query_with_intent_rag(self, session_id, message, context, semantic_intent = None):
+    async def _handle_new_query_with_intent_rag(self, session_id, message, intent, context, semantic_intent = None):
         try:
             # Get RAG context from intent
             #rag_context = None
@@ -108,7 +112,7 @@ class ChatManagerWithIntent(ChatManager):
                 #logger.info(f"RAG retrieved tables: {rag_context.primary_tables}")
             
             # Continue with existing SQL generation
-            response = await self.query_handler.generate_query(message ,session_id, context)
+            response = await self.query_handler.generate_query(message ,session_id, intent, context)
             
             # Optional: Add context info to confirmation message
             # if response.requires_confirmation and rag_context:
