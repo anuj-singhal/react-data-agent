@@ -27,6 +27,47 @@
       },
       "overall_confidence": null,
       "last_used": "2025-10-27T20:02:24.206545"
+    },
+    {
+      "id": "q_003",
+      "natural_language": "Market capitalization comparison for Q4 2024",
+      "variations": [],
+      "sql_query": "SELECT B.BANK_NAME, M.MARKET_CAP_AED_BN, M.MARKET_CAP_USD_BN\nFROM BANKS B\nJOIN MARKET_DATA M ON B.BANK_ID = M.BANK_ID\nWHERE M.YEAR = 2024 AND M.QUARTER = 4",
+      "validation_result": {
+        "SYNTAX": 1.0,
+        "SCHEMA": 1.0,
+        "SEMANTIC": 0.95
+      },
+      "overall_confidence": 0.99,
+      "last_used": "2025-10-28T18:00:43.025791"
+    },
+    {
+      "id": "q_004",
+      "natural_language": "Show me the top 5 banks by year-over-year profit growth for 2024",
+      "variations": [],
+      "sql_query": "SELECT B.BANK_NAME, \n       (FP_2024.YTD_PROFIT - FP_2023.YTD_PROFIT) / FP_2023.YTD_PROFIT * 100 AS PROFIT_GROWTH\nFROM FINANCIAL_PERFORMANCE FP_2024\nJOIN FINANCIAL_PERFORMANCE FP_2023 ON FP_2024.BANK_ID = FP_2023.BANK_ID AND FP_2023.YEAR = 2023\nJOIN BANKS B ON FP_2024.BANK_ID = B.BANK_ID\nWHERE FP_2024.YEAR = 2024\nORDER BY PROFIT_GROWTH DESC\nFETCH FIRST 5 ROWS ONLY",
+      "validation_result": {
+        "syntax": 1.0,
+        "schema": 1.0,
+        "semantic": 0.99,
+        "completeness": 0.99
+      },
+      "overall_confidence": 99.0,
+      "last_used": "2025-10-28T21:27:50.723410"
+    },
+    {
+      "id": "q_005",
+      "natural_language": "Average metrics by bank for 2024",
+      "variations": [],
+      "sql_query": "SELECT \n    b.BANK_NAME,\n    AVG(fp.YTD_INCOME) AS AVG_YTD_INCOME,\n    AVG(fp.YTD_PROFIT) AS AVG_YTD_PROFIT,\n    AVG(fp.LOANS_ADVANCES) AS AVG_LOANS_ADVANCES,\n    AVG(fp.DEPOSITS) AS AVG_DEPOSITS,\n    AVG(fp.NIM) AS AVG_NIM,\n    AVG(fp.COST_INCOME) AS AVG_COST_INCOME,\n    AVG(fp.NPL_RATIO) AS AVG_NPL_RATIO,\n    AVG(fp.COR) AS AVG_COR,\n    AVG(fp.STAGE3_COVER) AS AVG_STAGE3_COVER,\n    AVG(fp.ROTE) AS AVG_ROTE\nFROM \n    FINANCIAL_PERFORMANCE fp\nJOIN \n    BANKS b ON fp.BANK_ID = b.BANK_ID\nWHERE \n    fp.YEAR = 2024\nGROUP BY \n    b.BANK_NAME",
+      "validation_result": {
+        "syntax": 1.0,
+        "schema": 1.0,
+        "semantic": 0.99,
+        "completeness": 0.99
+      },
+      "overall_confidence": 99.0,
+      "last_used": "2025-10-28T21:46:34.870304"
     }
   ]
 }

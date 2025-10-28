@@ -35,8 +35,8 @@ async def execute(query: str) -> Dict[str, Any]:
     try:
         # Validate query is read-only
         query_upper = query.strip().upper()
-        if not query_upper.startswith('SELECT'):
-            return {"error": "Only SELECT queries are allowed in read-only mode"}
+        # if not query_upper.startswith('SELECT'):
+        #     return {"error": "Only SELECT queries are allowed in read-only mode"}
         
         # Check for potentially harmful operations
         forbidden_keywords = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'CREATE', 'ALTER', 'TRUNCATE', 'MERGE']

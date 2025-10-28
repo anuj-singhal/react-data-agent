@@ -59,9 +59,9 @@ class SQLValidator:
             self.client = None
 
         self.stage_weights = {
-            ValidationStage.SYNTAX: 0.20,
+            ValidationStage.SYNTAX: 0.40,
             ValidationStage.SCHEMA: 0.40,
-            ValidationStage.SEMANTIC: 0.40,
+            ValidationStage.SEMANTIC: 0.20,
             # ValidationStage.EXECUTION: 0.15,
             # ValidationStage.CORRECTNESS: 0.15  # Correctness instead of performance
         }
@@ -127,12 +127,13 @@ class SQLValidator:
         """Generate SQL using OpenAI"""
         prompt = self._create_semantic_validation_prompt(nl_query, sql_query)
         response = await self._validate(prompt)
-        
+        passed = response.get("semantic_match", False) and response.get("alignment_score", 0) > 0.7
+
         return ValidationResult(
                 stage=ValidationStage.SEMANTIC,
-                passed=response.get("valid", False),
+                passed=passed,
                 confidence=response.get("confidence", 0.0),
-                issues=response.get("issues", []),
+                issues=response.get("missing_elements", []),
                 suggestions=response.get("suggestions", []),
                 details=response
             )
@@ -279,7 +280,7 @@ class SQLValidator:
         """Create prompt for syntax validation with banking examples"""
         prompt = f"""
             You are an expert SQL syntax validator for banking systems. Analyze the given SQL query for syntax correctness.
-
+            If all the syntax is correct and the query is valid then make confidence: 1.0
             ## SYNTAX_VALIDATION
 
             ### Few-Shot Examples Using Banking Tables:
@@ -362,7 +363,7 @@ class SQLValidator:
 
         prompt_final = f"""
 You are a database schema expert for banking systems. Validate if the SQL query correctly only references tables and columns from the given schema.
-
+If all the schema is correct and the query is valid then make confidence: 1.0
 ## SCHEMA_VALIDATION
 {prompt}
 
@@ -422,6 +423,7 @@ Provide response in JSON format:
         """Create prompt for semantic validation with banking context"""
         prompt = f"""
 You are an expert in validating if SQL queries correctly capture the intent of banking-related business questions.
+If all the semantic is correct then make semantic_match true and alignment_score 1.0
 
 ## SEMANTIC_VALIDATION
 

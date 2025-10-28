@@ -85,8 +85,7 @@ class QueryHistory:
             self.validation_result = {
                 'schema': 0,
                 'syntax': 0,
-                'semantic': 0,
-                'completeness': 0
+                'semantic': 0
             }
 
 
