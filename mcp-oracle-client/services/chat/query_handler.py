@@ -70,12 +70,15 @@ class QueryHandler:
             if intent == "new_query":
                 cached_result = rag_agent.check_query_history(message)
                 
-                if cached_result and cached_result.get('similarity_score', 0) >= 0.90:
+                if cached_result and cached_result.get('similarity_score', 0) >= 0.95:
                     similarity_score = cached_result.get('similarity_score', 0)
                     print(f"\n{Fore.GREEN}✅ Cache Hit! Similarity: {similarity_score:.2%}{Style.RESET_ALL}")
+                    # Ask LLM if the historical SQL can be reused
+                    # similar_query = cached_result.get('sql_query', '')
+                    can_reuse = await self._verify_sql_reuse(message, cached_result)
                     
                     # For very high similarity, reuse directly
-                    if similarity_score >= 0.95:
+                    if similarity_score >= 0.95 and can_reuse['can_reuse']:
                         return self._create_cached_response(cached_result, session_id)
                     else:
                         # For 90-95% similarity, revalidate
@@ -115,6 +118,11 @@ class QueryHandler:
                 # For modify queries, check complexity of the modification request
                 check_message = message if intent == "new_query" else f"{previous_messages} {message}"
                 is_complex = await self.complex_processor.is_complex_query(check_message, llm_context)
+                needs_decomposition = await self._check_needs_decomposition(check_message)
+                if needs_decomposition and is_complex:
+                    is_complex = True
+                else:
+                    is_complex = False
                 print(f"  Query Type: {'Complex' if is_complex else 'Simple'}")
                 print(f"  Intent: {intent}")
             
@@ -144,7 +152,7 @@ class QueryHandler:
             # Step 7: Validate and Self-Correct
             print(f"\n{Fore.BLUE}🔄 Step 7: Validation and Self-Correction...{Style.RESET_ALL}")
             
-            if self.enable_self_correction:
+            if self.enable_self_correction and not is_complex:
                 correction_result = await self.llm_conversation.improve_query_through_conversation(
                     nl_query=message,
                     initial_sql=sql_query,
@@ -209,47 +217,37 @@ class QueryHandler:
                 action_type="general"
             )
     
+    async def _check_needs_decomposition(self, query: str) -> bool:
+        """Check if query needs decomposition"""
+        try:
+            return await sql_converter.check_complexity(query)
+        except:
+            return False
+
     async def _process_complex_query(self, query: str, context: Dict[str, Any], 
-                                    intent: str, previous_messages: Optional[str] = None,
-                                    last_sql: Optional[str] = None) -> str:
+                                intent: str, previous_messages: Optional[str] = None,
+                                last_sql: Optional[str] = None) -> str:
         """
-        Process complex query with decomposition and synthesis
-        Handles both new and modify intents
+        Process complex query using the robust processor
         """
         try:
-            # Step 1: Decompose the query
-            print("  📐 Decomposing complex query into tasks...")
-            decomposed = await self.complex_processor.decompose_query(query, context)
-            
-            if not decomposed.tasks:
-                print("  ⚠️ Decomposition failed, falling back to direct generation")
-                return await self._generate_sql_with_intent(
-                    context, intent, previous_messages, last_sql
-                )
-            
-            print(f"  📋 Decomposed into {len(decomposed.tasks)} tasks")
-            
-            # Step 2: Generate SQL for each task
-            print("  🔨 Generating SQL for each task...")
-            decomposed = await self.complex_processor.generate_task_queries(
-                decomposed, context, intent, previous_messages, last_sql
+            # Use the more direct and reliable approach
+            sql_query = await self.complex_processor.process_complex_query(
+                query, context, intent, previous_messages, last_sql
             )
             
-            # Step 3: Synthesize into final query
-            print("  🔗 Synthesizing tasks into final SQL...")
-            final_sql = await self.complex_processor.synthesize_queries(
-                decomposed, context, intent, previous_messages, last_sql
-            )
+            # Log success
+            logger.info(f"Complex query processed successfully: {sql_query[:100]}...")
             
-            return final_sql
+            return sql_query
             
         except Exception as e:
             logger.error(f"Complex query processing failed: {e}")
-            # Fallback to simple processing
+            # Fallback to direct generation
             return await self._generate_sql_with_intent(
                 context, intent, previous_messages, last_sql
             )
-    
+
     async def _process_simple_query(self, query: str, context: Dict[str, Any], 
                                    intent: str, previous_messages: Optional[str] = None,
                                    last_sql: Optional[str] = None) -> str:
@@ -297,6 +295,69 @@ class QueryHandler:
         
         return " | ".join(messages[-3:])  # Use last 3 user messages for context
     
+    async def _verify_sql_reuse(self, current_query: str, similar_query: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ask LLM if the historical SQL can be reused for current query
+        """
+        print(f"\n{Fore.CYAN}🤔 Verifying if cached SQL can be reused...{Style.RESET_ALL}")
+        print(f"  Original: '{similar_query['natural_language'][:60]}...'")
+        print(f"  Current:  '{current_query[:60]}...'")
+        
+        prompt = f"""
+        Determine if an existing SQL query can be reused for a new request.
+        
+        ORIGINAL NATURAL LANGUAGE QUERY: {similar_query['natural_language']}
+        ORIGINAL GENERATED SQL: {similar_query['sql_query']}
+        
+        NEW NATURAL LANGUAGE QUERY: {current_query}
+        
+        Analyze if the SQL can be reused as-is or needs modification.
+        Consider:
+        1. Are the entities (tables, columns) the same?
+        2. Are the filters/conditions equivalent?
+        3. Is the aggregation/grouping the same?
+        4. Is the time period the same or compatible?
+        
+        Return JSON:
+        {{
+            "can_reuse": true/false,
+            "reason": "explanation",
+            "confidence": 0-100
+        }}
+        """
+        
+        try:
+            response = await sql_converter.analyze_query_similarity(prompt)
+            
+            # Parse response
+            if isinstance(response, dict):
+                can_reuse = response.get('can_reuse', False)
+                reason = response.get('reason', '')
+                confidence = response.get('confidence', 0)
+                
+                if can_reuse:
+                    print(f"{Fore.GREEN}  ✓ SQL can be reused (confidence: {confidence}%){Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.YELLOW}  ✗ SQL needs regeneration: {reason}{Style.RESET_ALL}")
+                
+                return response
+            else:
+                # Default to not reusing if parsing fails
+                print(f"{Fore.YELLOW}  ✗ Unable to verify similarity{Style.RESET_ALL}")
+                return {
+                    "can_reuse": False,
+                    "reason": "Unable to determine similarity",
+                    "confidence": 0
+                }
+        except Exception as e:
+            logger.error(f"SQL reuse verification failed: {e}")
+            print(f"{Fore.RED}  ✗ Verification failed: {e}{Style.RESET_ALL}")
+            return {
+                "can_reuse": False,
+                "reason": str(e),
+                "confidence": 0
+            }
+
     def _create_cached_response(self, cached_result: Dict[str, Any], 
                                session_id: str) -> ChatResponse:
         """
