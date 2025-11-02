@@ -1,11 +1,12 @@
-// components/results/ResultsPanel.jsx
+// components/results/ResultsPanel.jsx (Modified to add Chart button)
 import React, { useState, useEffect } from 'react';
-import { Table } from 'lucide-react';
+import { Table, BarChart3 } from 'lucide-react';
 import ResultsHeader from './ResultsHeader';
 import DataTable from './DataTable';
 import Pagination from './Pagination';
 import LoadingSpinner from '../common/LoadingSpinner';
 import ErrorDisplay from '../common/ErrorDisplay';
+import ChartPanel from '../charts/ChartPanel';
 import { 
   filterRows, 
   paginateRows, 
@@ -17,6 +18,7 @@ import { ROWS_PER_PAGE } from '../../utils/constants';
 const ResultsPanel = ({ result, loading, error }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showChart, setShowChart] = useState(false);
 
   // Reset pagination when result changes
   useEffect(() => {
@@ -41,6 +43,10 @@ const ResultsPanel = ({ result, loading, error }) => {
     }
   };
 
+  const handleShowChart = () => {
+    setShowChart(true);
+  };
+
   // Empty state
   if (!result && !loading && !error) {
     return (
@@ -51,6 +57,7 @@ const ResultsPanel = ({ result, loading, error }) => {
           setSearchTerm={() => {}}
           filteredCount={0}
           onExport={() => {}}
+          onShowChart={() => {}}
         />
         <div className="flex-1 flex items-center justify-center text-gray-400 dark:text-gray-500">
           <div className="text-center">
@@ -71,6 +78,7 @@ const ResultsPanel = ({ result, loading, error }) => {
         setSearchTerm={handleSearchChange}
         filteredCount={filteredData.length}
         onExport={handleExport}
+        onShowChart={handleShowChart}
       />
 
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -109,6 +117,13 @@ const ResultsPanel = ({ result, loading, error }) => {
           </>
         )}
       </div>
+
+      {/* Chart Panel Modal */}
+      <ChartPanel
+        result={result}
+        visible={showChart}
+        onClose={() => setShowChart(false)}
+      />
     </div>
   );
 };

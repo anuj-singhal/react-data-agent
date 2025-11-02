@@ -1,13 +1,14 @@
-// components/results/ResultsHeader.jsx
+// components/results/ResultsHeader.jsx (Modified to add Chart button)
 import React from 'react';
-import { Table, Search, Download, Columns, Rows } from 'lucide-react';
+import { Table, Search, Download, Columns, Rows, BarChart3 } from 'lucide-react';
 
 const ResultsHeader = ({ 
   result, 
   searchTerm, 
   setSearchTerm, 
   filteredCount, 
-  onExport 
+  onExport,
+  onShowChart 
 }) => {
   return (
     <div className="flex-shrink-0 px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
@@ -49,6 +50,18 @@ const ResultsHeader = ({
                           focus:outline-none"
               />
             </div>
+            
+            {/* Chart Button */}
+            <button
+              onClick={onShowChart}
+              className="px-3 py-1.5 text-sm bg-purple-600 hover:bg-purple-700 text-white rounded 
+                        transition-colors flex items-center gap-1 active:scale-95"
+              title="Visualize Data"
+            >
+              <BarChart3 className="w-4 h-4" />
+              Chart
+            </button>
+            
             <button
               onClick={onExport}
               className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded 
