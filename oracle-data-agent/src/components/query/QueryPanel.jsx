@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, GripVertical, MessageSquare, History } from 'lucide-react';
 import ChatInterface from '../chat/ChatInterface';
-import SqlDisplay from './SqlDisplay';
+//import SqlDisplay from './SqlDisplay';
 import QueryHistory from './QueryHistory';
 
 const QueryPanel = ({ 
@@ -125,11 +125,11 @@ const QueryPanel = ({
                   />
                 </div>
                 
-                {sqlQuery && (
+                {/* {sqlQuery && (
                   <div className="border-t border-gray-200 dark:border-gray-700">
                     <SqlDisplay sqlQuery={sqlQuery} />
                   </div>
-                )}
+                )} */}
               </>
             ) : (
               <QueryHistory 

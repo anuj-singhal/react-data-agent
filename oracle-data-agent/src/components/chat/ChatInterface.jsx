@@ -1,6 +1,7 @@
 // components/chat/ChatInterface.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Loader2, Bot, User, Database, Code, CheckCircle, X, Edit } from 'lucide-react';
+import { Send, Loader2, Bot, User, Database, Code, CheckCircle, X, Copy } from 'lucide-react';
+
 import { formatSQL } from '../../utils/helpers';
 
 const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
@@ -9,13 +10,18 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
   const [loading, setLoading] = useState(false);
   const [pendingQuery, setPendingQuery] = useState(null);
   const messagesEndRef = useRef(null);
+  const [copiedMessageId, setCopiedMessageId] = useState(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
-    if (!sessionId) {
+    if (!sessionId && !onSessionStart.called) {
+      onSessionStart.called = true;
       startNewSession();
     }
-  }, []);
+    return () => {
+      onSessionStart.called = false;
+    };
+  }, [sessionId]);
 
   useEffect(() => {
     scrollToBottom();
@@ -111,6 +117,13 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
     }
   };
 
+  const handleCopySQL = (sql, messageId) => {
+    navigator.clipboard.writeText(sql).then(() => {
+      setCopiedMessageId(messageId);
+      setTimeout(() => setCopiedMessageId(null), 2000);
+    });
+  };
+
   const handleConfirmQuery = async (confirmed, feedback = '') => {
     if (!sessionId || !pendingQuery) return;
 
@@ -204,16 +217,29 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
             {message.type === 'confirmation' && message.sql_query ? (
               <div>
                 <p className="mb-3 whitespace-pre-wrap">{message.content.split('```')[0]}</p>
-                <div className="bg-gray-900 dark:bg-gray-800 rounded p-3 my-2">
+                <div className="bg-gray-900 dark:bg-gray-800 rounded p-4 my-3 max-w-full">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-400 flex items-center gap-1">
-                      <Code className="w-3 h-3" />
+                    <span className="text-sm text-gray-400 flex items-center gap-1">
+                      <Code className="w-4 h-4" />
                       SQL Query
                     </span>
+                    <button
+                      onClick={() => handleCopySQL(message.sql_query, message.id)}
+                      className="p-1.5 hover:bg-gray-700 rounded transition-colors group"
+                      title="Copy SQL"
+                    >
+                      {copiedMessageId === message.id ? (
+                        <CheckCircle className="w-4 h-4 text-green-400" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-gray-400 group-hover:text-gray-300" />
+                      )}
+                    </button>
                   </div>
-                  <pre className="text-xs text-gray-300 overflow-x-auto">
-                    <code>{formatSQL(message.sql_query)}</code>
-                  </pre>
+                  <div className="overflow-x-auto max-h-64 overflow-y-auto">
+                    <pre className="text-sm text-gray-300 min-w-0">
+                      <code className="block whitespace-pre">{formatSQL(message.sql_query)}</code>
+                    </pre>
+                  </div>
                 </div>
                 <div className="flex gap-2 mt-3">
                   <button
@@ -224,7 +250,7 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
                     <CheckCircle className="w-3 h-3" />
                     Execute
                   </button>
-                  <button
+                  {/* <button
                     onClick={() => {
                       const feedback = prompt('What would you like to change?');
                       if (feedback) handleConfirmQuery(false, feedback);
@@ -234,7 +260,7 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
                   >
                     <Edit className="w-3 h-3" />
                     Modify
-                  </button>
+                  </button> */}
                   <button
                     onClick={() => handleConfirmQuery(false)}
                     disabled={loading}
