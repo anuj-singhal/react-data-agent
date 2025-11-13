@@ -1,0 +1,408 @@
+{
+    "tables": {
+        "clients": {
+            "columns": {
+                "client_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Unique identifier for each client",
+                    "sample_values": ["CID_000001", "CID_000002", "CID_000003", "CID_000004", "CID_000005"]
+                },
+                "client_name": {
+                    "data_type": "VARCHAR(255)",
+                    "description": "Full name of the client",
+                    "sample_values": ["John Smith", "Sarah Johnson", "Michael Chen", "Emily Davis", "Robert Wilson"]
+                },
+                "email": {
+                    "data_type": "VARCHAR(255)",
+                    "description": "Client's email address",
+                    "sample_values": ["john.smith@email.com", "sarah.j@gmail.com", "m.chen@company.com", "emily.davis@outlook.com", "r.wilson@business.net"]
+                },
+                "phone": {
+                    "data_type": "VARCHAR(20)",
+                    "description": "Client's phone number",
+                    "sample_values": ["+1-555-123-4567", "+1-555-987-6543", "+1-555-246-8135", "+1-555-369-2580", "+1-555-147-2589"]
+                },
+                "date_of_birth": {
+                    "data_type": "DATE",
+                    "description": "Client's date of birth",
+                    "sample_values": ["1965-03-15", "1978-07-22", "1982-11-30", "1990-05-18", "1955-09-08"]
+                },
+                "address": {
+                    "data_type": "TEXT",
+                    "description": "Client's residential address",
+                    "sample_values": [
+                        "123 Main St, New York, NY 10001",
+                        "456 Oak Ave, Los Angeles, CA 90012",
+                        "789 Park Rd, Chicago, IL 60601",
+                        "321 Elm St, Houston, TX 77002",
+                        "654 Market St, San Francisco, CA 94102"
+                    ]
+                },
+                "risk_profile": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Risk tolerance level (Conservative, Moderate, Aggressive)",
+                    "sample_values": ["Conservative", "Moderate", "Aggressive", "Moderate", "Very Aggressive"]
+                },
+                "net_worth": {
+                    "data_type": "DECIMAL(15,2)",
+                    "description": "Total net worth of the client in USD",
+                    "sample_values": [2500000.00, 5750000.00, 1200000.00, 8900000.00, 15600000.00]
+                },
+                "annual_income": {
+                    "data_type": "DECIMAL(12,2)",
+                    "description": "Annual income of the client in USD",
+                    "sample_values": [250000.00, 450000.00, 185000.00, 680000.00, 1200000.00]
+                },
+                "client_since": {
+                    "data_type": "DATE",
+                    "description": "Date when client relationship started",
+                    "sample_values": ["2015-01-15", "2018-06-20", "2020-03-10", "2012-09-05", "2019-11-22"]
+                }
+            },
+            "primary_key": "client_id"
+        },
+        "portfolios": {
+            "columns": {
+                "portfolio_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Unique identifier for each portfolio",
+                    "sample_values": ["PF_00000001", "PF_00000002", "PF_00000003", "PF_00000004", "PF_00000005"]
+                },
+                "client_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Reference to the client who owns this portfolio",
+                    "sample_values": ["CID_000001", "CID_000001", "CID_000002", "CID_000003", "CID_000004"]
+                },
+                "portfolio_name": {
+                    "data_type": "VARCHAR(100)",
+                    "description": "Name of the portfolio (e.g., Retirement, Growth, Income)",
+                    "sample_values": ["Retirement Fund", "Growth Portfolio", "Income Generation", "College Savings", "Emergency Fund"]
+                },
+                "portfolio_type": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Type of portfolio (Taxable, IRA, 401k, Trust)",
+                    "sample_values": ["IRA", "401k", "Taxable", "Roth IRA", "Trust"]
+                },
+                "total_value": {
+                    "data_type": "DECIMAL(15,2)",
+                    "description": "Total current value of the portfolio in USD",
+                    "sample_values": [500000.00, 1250000.00, 350000.00, 2800000.00, 750000.00]
+                },
+                "cash_balance": {
+                    "data_type": "DECIMAL(15,2)",
+                    "description": "Cash balance in the portfolio in USD",
+                    "sample_values": [25000.00, 50000.00, 15000.00, 100000.00, 35000.00]
+                },
+                "creation_date": {
+                    "data_type": "DATE",
+                    "description": "Date when portfolio was created",
+                    "sample_values": ["2015-01-20", "2018-06-25", "2020-03-15", "2012-09-10", "2019-11-25"]
+                },
+                "last_rebalance_date": {
+                    "data_type": "DATE",
+                    "description": "Date of last portfolio rebalancing",
+                    "sample_values": ["2024-10-15", "2024-09-20", "2024-11-01", "2024-08-30", "2024-10-05"]
+                },
+                "target_allocation": {
+                    "data_type": "TEXT",
+                    "description": "Target asset allocation in JSON format",
+                    "sample_values": [
+                        "{\"stocks\": 60, \"bonds\": 30, \"cash\": 10}",
+                        "{\"stocks\": 80, \"bonds\": 15, \"cash\": 5}",
+                        "{\"stocks\": 40, \"bonds\": 50, \"cash\": 10}",
+                        "{\"stocks\": 70, \"bonds\": 20, \"cash\": 10}",
+                        "{\"stocks\": 50, \"bonds\": 40, \"cash\": 10}"
+                    ]
+                }
+            },
+            "primary_key": "portfolio_id"
+        },
+        "holdings": {
+            "columns": {
+                "holding_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Unique identifier for each holding",
+                    "sample_values": ["HLD_0000000001", "HLD_0000000002", "HLD_0000000003", "HLD_0000000004", "HLD_0000000005"]
+                },
+                "portfolio_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Reference to the portfolio containing this holding",
+                    "sample_values": ["PF_00000001", "PF_00000001", "PF_00000002", "PF_00000002", "PF_00000003"]
+                },
+                "asset_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Reference to the asset being held",
+                    "sample_values": ["AST_AAPL01", "AST_GOOGL1", "AST_MSFT01", "AST_AMZN01", "AST_SPY001"]
+                },
+                "quantity": {
+                    "data_type": "DECIMAL(12,4)",
+                    "description": "Number of shares/units held",
+                    "sample_values": [100.0000, 50.0000, 200.0000, 75.0000, 150.0000]
+                },
+                "purchase_price": {
+                    "data_type": "DECIMAL(10,2)",
+                    "description": "Average purchase price per unit in USD",
+                    "sample_values": [150.25, 2800.50, 350.75, 3200.00, 420.30]
+                },
+                "current_price": {
+                    "data_type": "DECIMAL(10,2)",
+                    "description": "Current market price per unit in USD",
+                    "sample_values": [175.50, 2950.25, 380.60, 3350.75, 445.20]
+                },
+                "purchase_date": {
+                    "data_type": "DATE",
+                    "description": "Date of purchase",
+                    "sample_values": ["2023-01-15", "2023-03-20", "2023-05-10", "2023-07-25", "2023-09-05"]
+                },
+                "current_value": {
+                    "data_type": "DECIMAL(15,2)",
+                    "description": "Current total value of holding in USD",
+                    "sample_values": [17550.00, 147512.50, 76120.00, 251306.25, 66780.00]
+                },
+                "unrealized_gain_loss": {
+                    "data_type": "DECIMAL(15,2)",
+                    "description": "Unrealized profit or loss in USD",
+                    "sample_values": [2525.00, 7487.50, 5970.00, 11306.25, 3720.00]
+                },
+                "cost_basis": {
+                    "data_type": "DECIMAL(15,2)",
+                    "description": "Total cost basis for tax purposes in USD",
+                    "sample_values": [15025.00, 140025.00, 70150.00, 240000.00, 63045.00]
+                }
+            },
+            "primary_key": "holding_id"
+        },
+        "assets": {
+            "columns": {
+                "asset_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Unique identifier for each asset",
+                    "sample_values": ["AST_AAPL01", "AST_GOOGL1", "AST_MSFT01", "AST_AMZN01", "AST_SPY001"]
+                },
+                "ticker": {
+                    "data_type": "VARCHAR(20)",
+                    "description": "Stock ticker symbol",
+                    "sample_values": ["AAPL", "GOOGL", "MSFT", "AMZN", "SPY"]
+                },
+                "asset_name": {
+                    "data_type": "VARCHAR(255)",
+                    "description": "Full name of the asset",
+                    "sample_values": ["Apple Inc.", "Alphabet Inc.", "Microsoft Corporation", "Amazon.com Inc.", "SPDR S&P 500 ETF"]
+                },
+                "asset_type": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Type of asset (Stock, Bond, ETF, Mutual Fund, Crypto)",
+                    "sample_values": ["Stock", "Stock", "Stock", "Stock", "ETF"]
+                },
+                "sector": {
+                    "data_type": "VARCHAR(100)",
+                    "description": "Market sector (Technology, Healthcare, Finance, etc.)",
+                    "sample_values": ["Technology", "Technology", "Technology", "Consumer", "Diversified"]
+                },
+                "market_cap": {
+                    "data_type": "DECIMAL(15,2)",
+                    "description": "Market capitalization in billions USD",
+                    "sample_values": [3000.00, 1800.00, 2900.00, 1700.00, 450.00]
+                },
+                "dividend_yield": {
+                    "data_type": "DECIMAL(6,4)",
+                    "description": "Annual dividend yield percentage",
+                    "sample_values": [0.0044, 0.0000, 0.0066, 0.0000, 0.0128]
+                },
+                "beta": {
+                    "data_type": "DECIMAL(5,2)",
+                    "description": "Beta coefficient for risk assessment",
+                    "sample_values": [1.25, 1.02, 0.93, 1.14, 1.00]
+                },
+                "expense_ratio": {
+                    "data_type": "DECIMAL(6,4)",
+                    "description": "Expense ratio for funds (percentage)",
+                    "sample_values": [0.0000, 0.0000, 0.0000, 0.0000, 0.0009]
+                }
+            },
+            "primary_key": "asset_id"
+        },
+        "transactions": {
+            "columns": {
+                "transaction_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Unique identifier for each transaction",
+                    "sample_values": ["TXN_000000000001", "TXN_000000000002", "TXN_000000000003", "TXN_000000000004", "TXN_000000000005"]
+                },
+                "portfolio_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Reference to the portfolio",
+                    "sample_values": ["PF_00000001", "PF_00000001", "PF_00000002", "PF_00000002", "PF_00000003"]
+                },
+                "asset_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Reference to the asset traded",
+                    "sample_values": ["AST_AAPL01", "AST_GOOGL1", "AST_MSFT01", "AST_AMZN01", "AST_SPY001"]
+                },
+                "transaction_type": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Type of transaction (Buy, Sell, Dividend, Interest)",
+                    "sample_values": ["Buy", "Sell", "Buy", "Dividend", "Buy"]
+                },
+                "quantity": {
+                    "data_type": "DECIMAL(12,4)",
+                    "description": "Number of shares/units transacted",
+                    "sample_values": [100.0000, 50.0000, 75.0000, 0.0000, 200.0000]
+                },
+                "price": {
+                    "data_type": "DECIMAL(10,2)",
+                    "description": "Price per unit in USD",
+                    "sample_values": [150.25, 2850.75, 380.50, 2.50, 420.30]
+                },
+                "total_amount": {
+                    "data_type": "DECIMAL(15,2)",
+                    "description": "Total transaction amount in USD",
+                    "sample_values": [15025.00, 142537.50, 28537.50, 125.00, 84060.00]
+                },
+                "commission": {
+                    "data_type": "DECIMAL(10,2)",
+                    "description": "Commission paid in USD",
+                    "sample_values": [0.00, 0.00, 0.00, 0.00, 0.00]
+                },
+                "transaction_date": {
+                    "data_type": "TIMESTAMP",
+                    "description": "Date and time of transaction",
+                    "sample_values": [
+                        "2024-01-15 09:30:00",
+                        "2024-02-20 14:15:00",
+                        "2024-03-10 11:45:00",
+                        "2024-04-01 00:00:00",
+                        "2024-05-05 10:20:00"
+                    ]
+                },
+                "settlement_date": {
+                    "data_type": "DATE",
+                    "description": "Settlement date (T+2)",
+                    "sample_values": ["2024-01-17", "2024-02-22", "2024-03-12", "2024-04-03", "2024-05-07"]
+                }
+            },
+            "primary_key": "transaction_id"
+        },
+        "advisors": {
+            "columns": {
+                "advisor_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Unique identifier for each advisor",
+                    "sample_values": ["ADV_00001", "ADV_00002", "ADV_00003", "ADV_00004", "ADV_00005"]
+                },
+                "advisor_name": {
+                    "data_type": "VARCHAR(255)",
+                    "description": "Full name of the advisor",
+                    "sample_values": ["James Anderson", "Patricia Williams", "Michael Brown", "Jennifer Martinez", "David Taylor"]
+                },
+                "email": {
+                    "data_type": "VARCHAR(255)",
+                    "description": "Advisor's email address",
+                    "sample_values": [
+                        "j.anderson@wealthmgmt.com",
+                        "p.williams@wealthmgmt.com",
+                        "m.brown@wealthmgmt.com",
+                        "j.martinez@wealthmgmt.com",
+                        "d.taylor@wealthmgmt.com"
+                    ]
+                },
+                "phone": {
+                    "data_type": "VARCHAR(20)",
+                    "description": "Advisor's phone number",
+                    "sample_values": ["+1-555-100-2001", "+1-555-100-2002", "+1-555-100-2003", "+1-555-100-2004", "+1-555-100-2005"]
+                },
+                "certification": {
+                    "data_type": "VARCHAR(100)",
+                    "description": "Professional certifications (CFA, CFP, etc.)",
+                    "sample_values": ["CFA", "CFP", "CFA, CFP", "ChFC", "CPA, CFP"]
+                },
+                "years_experience": {
+                    "data_type": "INTEGER",
+                    "description": "Years of experience in wealth management",
+                    "sample_values": [15, 12, 20, 8, 25]
+                },
+                "specialization": {
+                    "data_type": "VARCHAR(255)",
+                    "description": "Area of specialization",
+                    "sample_values": ["Retirement Planning", "Tax Strategy", "Estate Planning", "Investment Management", "Risk Management"]
+                }
+            },
+            "primary_key": "advisor_id"
+        },
+        "client_advisor_mapping": {
+            "columns": {
+                "mapping_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Unique identifier for the mapping",
+                    "sample_values": ["MAP_00000001", "MAP_00000002", "MAP_00000003", "MAP_00000004", "MAP_00000005"]
+                },
+                "client_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Reference to the client",
+                    "sample_values": ["CID_000001", "CID_000002", "CID_000003", "CID_000004", "CID_000005"]
+                },
+                "advisor_id": {
+                    "data_type": "VARCHAR(50)",
+                    "description": "Reference to the advisor",
+                    "sample_values": ["ADV_00001", "ADV_00001", "ADV_00002", "ADV_00003", "ADV_00004"]
+                },
+                "assignment_date": {
+                    "data_type": "DATE",
+                    "description": "Date when advisor was assigned to client",
+                    "sample_values": ["2015-01-15", "2018-06-20", "2020-03-10", "2012-09-05", "2019-11-22"]
+                },
+                "is_primary": {
+                    "data_type": "BOOLEAN",
+                    "description": "Whether this is the primary advisor",
+                    "sample_values": [true, true, true, true, false]
+                }
+            },
+            "primary_key": "mapping_id"
+        }
+    },
+    "relationships": [
+        {
+            "parent_table_name": "clients",
+            "child_table_name": "portfolios",
+            "parent_primary_key": "client_id",
+            "child_foreign_key": "client_id"
+        },
+        {
+            "parent_table_name": "portfolios",
+            "child_table_name": "holdings",
+            "parent_primary_key": "portfolio_id",
+            "child_foreign_key": "portfolio_id"
+        },
+        {
+            "parent_table_name": "assets",
+            "child_table_name": "holdings",
+            "parent_primary_key": "asset_id",
+            "child_foreign_key": "asset_id"
+        },
+        {
+            "parent_table_name": "portfolios",
+            "child_table_name": "transactions",
+            "parent_primary_key": "portfolio_id",
+            "child_foreign_key": "portfolio_id"
+        },
+        {
+            "parent_table_name": "assets",
+            "child_table_name": "transactions",
+            "parent_primary_key": "asset_id",
+            "child_foreign_key": "asset_id"
+        },
+        {
+            "parent_table_name": "clients",
+            "child_table_name": "client_advisor_mapping",
+            "parent_primary_key": "client_id",
+            "child_foreign_key": "client_id"
+        },
+        {
+            "parent_table_name": "advisors",
+            "child_table_name": "client_advisor_mapping",
+            "parent_primary_key": "advisor_id",
+            "child_foreign_key": "advisor_id"
+        }
+    ],
+    "METADATA_SPEC_VERSION": "V1"
+}
