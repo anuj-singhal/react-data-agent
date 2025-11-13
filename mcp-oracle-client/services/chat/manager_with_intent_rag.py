@@ -6,6 +6,7 @@ import json
 from models.chat import ChatResponse, ConversationContext
 from services.chat.manager import ChatManager
 from services.chat.intent_agent import IntentAgent, SemanticIntent
+from services.chat.nl_classification_agent import NLClassificationAgent
 #from services.sql_converter import sql_converter
 from services.query_executor import query_executor
 from services.mcp_client import mcp_client
@@ -25,6 +26,7 @@ class ChatManagerWithIntent(ChatManager):
         """Initialize with Intent Agent added to existing components."""
         super().__init__()
         self.intent_agent = IntentAgent()
+        self.nl_classify_agent = NLClassificationAgent()
         # Initialize components
         logger.info("Chat manager initialized with Intent Agent extension")
     
@@ -39,18 +41,43 @@ class ChatManagerWithIntent(ChatManager):
         # Add user message to history (as before)
         self.context_manager.add_message(session_id, "user", message)
         
+        # Classify NL Query
+        print("-"*50)
+        print("Step 0 - Extracting classification from NL query to process")
+        print("-"*50)
+        classify_result = await self.nl_classify_agent.classify_query(message)
+        if(classify_result.classification != "process"):
+            message = classify_result.answer
+            message += classify_result.message
+            return ChatResponse(
+                message = message,
+                session_id=session_id,
+                action_type=classify_result.action_type
+            )
+        
+        print("Processing message with NL Classification : ", classify_result.message)
+        logger.info(f"Processing message with NL Classification : {classify_result.message}")
+
         # Classify intent (existing functionality)
+        print("-"*50)
+        print("Step 1 - Extracting message intent")
+        print("-"*50)
         intent = await self.intent_classifier.classify_intent(message, context)
+        print("Processing message with intent: ", intent)
         logger.info(f"Processing message with intent: {intent}")
         
         # Try to extract semantic intent for new queries only
         semantic_intent = None
         if intent in ["new_query", "execute_immediately"]:
             try:
+                print("-"*50)
+                print("Step 2 - Extracting Semantic intent")
+                print("-"*50)
                 semantic_intent = await self.intent_agent.extract_intent(
                     message,
                     {"last_sql": context.last_sql} if context.last_sql else None
                 )
+                print(f"Semantic intent extracted: {semantic_intent.to_dict()}")
                 logger.info(f"Semantic intent extracted: {semantic_intent.to_dict()}")
                 
                 # Store in context for reference

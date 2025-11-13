@@ -147,15 +147,15 @@ class SQLValidator:
         # Stage 1: Syntax Validation
         logger.info("Stage 1: Validating syntax...")
         stage_results[ValidationStage.SYNTAX] = await self.validate_syntax(sql_query)
-        
+        print(stage_results[ValidationStage.SYNTAX].confidence)
         # Stage 2: Schema Validation
         logger.info("Stage 2: Validating schema...")
         stage_results[ValidationStage.SCHEMA] = await self.validate_schema(sql_query, context)
-        
+        print(stage_results[ValidationStage.SCHEMA])
         # Stage 3: Semantic Validation
         logger.info("Stage 3: Validating semantics...")
         stage_results[ValidationStage.SEMANTIC] = await self.validate_semantics(nl_query, sql_query)
-        
+        print(stage_results[ValidationStage.SEMANTIC])
         # # Stage 4: Execution Validation
         # logger.info("Stage 4: Validating execution...")
         # stage_results[ValidationStage.EXECUTION] = self.validate_execution(sql_query)
@@ -166,10 +166,11 @@ class SQLValidator:
         
         # Calculate overall confidence
         overall_confidence, verdict = self._calculate_overall_confidence(stage_results)
-        
+        print("Overall confidence: ", overall_confidence)
+        print("Verdict : ", verdict)
         # Generate explanation
         explanation = self._generate_explanation(stage_results, overall_confidence)
-        
+        print("Explanation : ", explanation)
         # Determine if SQL needs correction
         corrected_sql = None
         if overall_confidence < 0.7:

@@ -80,7 +80,7 @@ class AgenticLLMInterface:
         """
         if self.provider == "openai" and self.client:
             try:
-                response = self.client.chat.completions.create(
+                response = await self.client.chat.completions.create(
                     model=self.model,
                     messages=[
                         {

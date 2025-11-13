@@ -38,7 +38,7 @@ class QueryHandler:
         self.llm_conversation = LLMConversationManager(sql_converter, sql_validator)
         
         # Configuration flags
-        self.enable_complex_processing = True
+        self.enable_complex_processing = False
         self.enable_self_correction = True
         self.confidence_threshold = 0.95  # For caching
         
@@ -62,9 +62,10 @@ class QueryHandler:
                 if last_sql:
                     print(f"  Previous SQL: {last_sql[:100]}...")
             
-            # Step 1: Check query history for similar queries (only for new queries)
+            # Step 3: Check query history for similar queries (only for new queries)
             print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
-            print(f"{Fore.CYAN}📋 Processing Query ({intent}): {message[:100]}...{Style.RESET_ALL}")
+            print("Step 3 - Check query history for similar queries (only for new queries)")
+            print(f"{Fore.CYAN}📋 Processing Query ({intent}): {message}...{Style.RESET_ALL}")
             print(f"{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
             
             if intent == "new_query":
@@ -75,17 +76,21 @@ class QueryHandler:
                     print(f"\n{Fore.GREEN}✅ Cache Hit! Similarity: {similarity_score:.2%}{Style.RESET_ALL}")
                     # Ask LLM if the historical SQL can be reused
                     # similar_query = cached_result.get('sql_query', '')
+                    print("Ask LLM if the historical SQL can be reused")
                     can_reuse = await self._verify_sql_reuse(message, cached_result)
                     
                     # For very high similarity, reuse directly
                     if similarity_score >= 0.95 and can_reuse['can_reuse']:
+                        print("Very high similarity, reuse directly")
                         return self._create_cached_response(cached_result, session_id)
                     else:
                         # For 90-95% similarity, revalidate
                         print(f"{Fore.YELLOW}⚠️ Revalidating cached query{Style.RESET_ALL}")
             
-            # Step 2: Find relevant tables using RAG
-            print(f"\n{Fore.BLUE}🔍 Step 2: Finding relevant tables...{Style.RESET_ALL}")
+            # Step 4: Find relevant tables using RAG
+            print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+            print(f"\n{Fore.BLUE}🔍 Step 4: Finding relevant tables...{Style.RESET_ALL}")
+            print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
             
             # For modify query, combine current and previous messages for better table discovery
             search_query = rag_message or message
@@ -106,12 +111,16 @@ class QueryHandler:
             
             print(f"  📊 Found {len(tables)} relevant tables: {', '.join(tables)}")
             
-            # Step 3: Build context for LLM using RAG
-            print(f"\n{Fore.BLUE}📝 Step 3: Building context with RAG...{Style.RESET_ALL}")
+            # Step 5: Build context for LLM using RAG
+            print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+            print(f"\n{Fore.BLUE}📝 Step 5: Building context with RAG...{Style.RESET_ALL}")
+            print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
             llm_context = rag_agent.build_context(tables, message)
             
-            # Step 4: Check if query is complex
-            print(f"\n{Fore.BLUE}🔬 Step 4: Analyzing query complexity...{Style.RESET_ALL}")
+            # Step 6: Check if query is complex
+            print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+            print(f"\n{Fore.BLUE}🔬 Step 6: Analyzing query complexity...{Style.RESET_ALL}")
+            print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
             
             is_complex = False
             if self.enable_complex_processing:
@@ -126,14 +135,18 @@ class QueryHandler:
                 print(f"  Query Type: {'Complex' if is_complex else 'Simple'}")
                 print(f"  Intent: {intent}")
             
-            # Step 5: Process based on complexity and intent
+            # Step 7: Process based on complexity and intent
             if is_complex:
-                print(f"\n{Fore.MAGENTA}🔧 Step 5: Processing complex query...{Style.RESET_ALL}")
+                print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+                print(f"\n{Fore.MAGENTA}🔧 Step 7: Processing complex query...{Style.RESET_ALL}")
+                print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
                 sql_query = await self._process_complex_query(
                     message, llm_context, intent, previous_messages, last_sql
                 )
             else:
-                print(f"\n{Fore.BLUE}⚡ Step 5: Processing simple query...{Style.RESET_ALL}")
+                print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+                print(f"\n{Fore.BLUE}⚡ Step 7: Processing simple query...{Style.RESET_ALL}")
+                print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
                 sql_query = await self._process_simple_query(
                     message, llm_context, intent, previous_messages, last_sql
                 )
@@ -145,13 +158,16 @@ class QueryHandler:
                     error="SQL generation failed",
                     action_type="general"
                 )
-            
-            print(f"\n{Fore.GREEN}✅ Step 6: Generated Initial SQL:{Style.RESET_ALL}")
-            print(f"  {sql_query[:200]}...")
+            print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+            print(f"\n{Fore.GREEN}✅ Step 8: Generated Initial SQL:{Style.RESET_ALL}")
+            print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+            print(f"  {sql_query}...")
             sql_query = clean_sql_query(sql_query)
-            # Step 7: Validate and Self-Correct
-            print(f"\n{Fore.BLUE}🔄 Step 7: Validation and Self-Correction...{Style.RESET_ALL}")
-            
+            # Step 9: Validate and Self-Correct
+            print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+            print(f"\n{Fore.BLUE}🔄 Step 9: Validation and Self-Correction...{Style.RESET_ALL}")
+            print(f"\n{Fore.CYAN}{'='*60}{Style.RESET_ALL}")
+
             if self.enable_self_correction and not is_complex:
                 correction_result = await self.llm_conversation.improve_query_through_conversation(
                     nl_query=message,
