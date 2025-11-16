@@ -6,25 +6,33 @@ from models.chat import (
     ChatRequest,
     ChatResponse,
     QueryConfirmationRequest,
-    FollowUpRequest
+    FollowUpRequest,
+    ProcessingStep  
 )
 
 from pathlib import Path
 from typing import Dict
 import asyncio
+import json
 
-#from services.chat import chat_manager
-from services.chat.manager_with_intent_rag import ChatManagerWithIntent
-chat_manager = ChatManagerWithIntent()
+# Use the new manager with steps
+from services.chat.manager_with_steps import ChatManagerWithSteps
+chat_manager = ChatManagerWithSteps()  # Use the extended manager
+
 from services.query_executor import query_executor
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["Chat"])
 
+# Add a global store for processing steps (you could also use Redis or similar)
+processing_steps_store = {}
+
 @router.post("/start")
 async def start_chat():
     """Start a new chat session."""
     session_id = chat_manager.create_session()
+    # Initialize processing steps for this session
+    processing_steps_store[session_id] = []
     return {
         "session_id": session_id,
         "message": "Chat session started. How can I help you with your database queries?"
@@ -32,13 +40,23 @@ async def start_chat():
 
 @router.post("/message", response_model=ChatResponse)
 async def send_message(request: ChatRequest):
-    """Send a message in the chat."""
+    """Send a message in the chat with processing steps."""
     try:
-        # Process the message
-        response = await chat_manager.process_message(
+        # Clear previous processing steps for this session
+        if request.session_id in processing_steps_store:
+            processing_steps_store[request.session_id] = []
+        
+        # Process the message and collect steps
+        response = await chat_manager.process_message_with_steps(
             request.session_id,
-            request.message
+            request.message,
+            processing_steps_store
         )
+        
+        # Include processing steps in response
+        if request.session_id in processing_steps_store:
+            response.processing_steps = processing_steps_store[request.session_id]
+        
         return response
         
     except Exception as e:
@@ -47,7 +65,8 @@ async def send_message(request: ChatRequest):
             message=f"I encountered an error: {str(e)}",
             session_id=request.session_id,
             error=str(e),
-            action_type="general"
+            action_type="general",
+            processing_steps=[]
         )
 
 @router.post("/confirm")

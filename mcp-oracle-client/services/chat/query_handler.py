@@ -70,7 +70,7 @@ class QueryHandler:
             
             if intent == "new_query":
                 cached_result = rag_agent.check_query_history(message)
-                
+                cached_result = None
                 if cached_result and cached_result.get('similarity_score', 0) >= 0.95:
                     similarity_score = cached_result.get('similarity_score', 0)
                     print(f"\n{Fore.GREEN}✅ Cache Hit! Similarity: {similarity_score:.2%}{Style.RESET_ALL}")

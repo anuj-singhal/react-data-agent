@@ -4,6 +4,15 @@ from typing import Optional, List, Dict, Any, Literal
 from pydantic import BaseModel, Field
 from datetime import datetime
 
+class ProcessingStep(BaseModel):
+    """Individual processing step."""
+    step_number: int
+    step_name: str
+    status: Literal["pending", "processing", "completed", "error"]
+    message: str
+    details: Optional[Dict[str, Any]] = None
+    timestamp: datetime = Field(default_factory=datetime.now)
+
 class ChatMessage(BaseModel):
     """Individual chat message."""
     role: Literal["user", "assistant", "system"]
@@ -26,6 +35,7 @@ class ChatResponse(BaseModel):
     error: Optional[str] = None
     session_id: str
     action_type: Literal["query_confirmation", "query_execution", "follow_up", "general"]
+    processing_steps: Optional[List[ProcessingStep]] = []  # Add this field
 
 class QueryConfirmationRequest(BaseModel):
     """Request for query confirmation."""

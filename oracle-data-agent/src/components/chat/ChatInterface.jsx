@@ -1,14 +1,76 @@
 // components/chat/ChatInterface.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Loader2, Bot, User, Database, Code, CheckCircle, X, Copy } from 'lucide-react';
-
+import { 
+  Send, Loader2, Bot, User, Database, Code, 
+  CheckCircle, X, Copy, ChevronRight, Clock, 
+  AlertCircle, Activity 
+} from 'lucide-react';
 import { formatSQL } from '../../utils/helpers';
+
+const ProcessingSteps = ({ steps }) => {
+  if (!steps || steps.length === 0) return null;
+
+  const getStepIcon = (status) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="w-4 h-4 text-green-500" />;
+      case 'processing':
+        return <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />;
+      case 'error':
+        return <AlertCircle className="w-4 h-4 text-red-500" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-400" />;
+    }
+  };
+
+  return (
+    <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+      <div className="flex items-center gap-2 mb-2 text-xs font-medium text-gray-600 dark:text-gray-400">
+        <Activity className="w-4 h-4" />
+        Processing Steps
+      </div>
+      <div className="space-y-2">
+        {steps.map((step, idx) => (
+          <div key={idx} className="flex items-start gap-2 text-xs">
+            {getStepIcon(step.status)}
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-700 dark:text-gray-300">
+                  Step {step.step_number}: {step.step_name}
+                </span>
+                {step.status === 'processing' && (
+                  <span className="text-blue-500 text-xs">Processing...</span>
+                )}
+              </div>
+              <div className="text-gray-600 dark:text-gray-400 mt-0.5">
+                {step.message}
+              </div>
+              {step.details && Object.keys(step.details).length > 0 && (
+                <div className="mt-1 p-2 bg-gray-100 dark:bg-gray-700 rounded text-xs">
+                  {Object.entries(step.details).map(([key, value]) => (
+                    <div key={key} className="flex gap-2">
+                      <span className="text-gray-500">{key}:</span>
+                      <span className="text-gray-700 dark:text-gray-300">
+                        {typeof value === 'object' ? JSON.stringify(value) : value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [pendingQuery, setPendingQuery] = useState(null);
+  const [currentProcessingSteps, setCurrentProcessingSteps] = useState([]);
   const messagesEndRef = useRef(null);
   const [copiedMessageId, setCopiedMessageId] = useState(null);
   const inputRef = useRef(null);
@@ -25,7 +87,7 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, currentProcessingSteps]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -64,6 +126,7 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
     addMessage('user', message);
     setInputMessage('');
     setLoading(true);
+    setCurrentProcessingSteps([]); // Clear previous steps
 
     try {
       const response = await fetch('http://localhost:8000/chat/message', {
@@ -78,13 +141,19 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
 
       const data = await response.json();
       
+      // Store processing steps if available
+      if (data.processing_steps && data.processing_steps.length > 0) {
+        setCurrentProcessingSteps(data.processing_steps);
+      }
+      
       // Handle response based on action type
       if (data.action_type === 'query_confirmation') {
-        // Show query confirmation
+        // Show query confirmation with processing steps
         setPendingQuery(data.sql_query);
         addMessage('assistant', data.message, { 
           type: 'confirmation',
-          sql_query: data.sql_query 
+          sql_query: data.sql_query,
+          processing_steps: data.processing_steps
         });
       } else if (data.action_type === 'query_execution') {
         // Query was executed
@@ -94,23 +163,33 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
         addMessage('assistant', data.message, {
           type: 'execution',
           sql_query: data.sql_query,
-          has_result: !!data.result
+          has_result: !!data.result,
+          processing_steps: data.processing_steps
         });
       } else if (data.action_type === 'follow_up') {
         // Follow-up question answered
-        addMessage('assistant', data.message, { type: 'follow_up' });
+        addMessage('assistant', data.message, { 
+          type: 'follow_up',
+          processing_steps: data.processing_steps
+        });
       } else {
         // General response
-        addMessage('assistant', data.message);
+        addMessage('assistant', data.message, {
+          processing_steps: data.processing_steps
+        });
       }
 
       if (data.error) {
         addMessage('system', `Error: ${data.error}`, { type: 'error' });
       }
 
+      // Clear processing steps after message is added
+      setTimeout(() => setCurrentProcessingSteps([]), 500);
+
     } catch (error) {
       console.error('Failed to send message:', error);
       addMessage('system', 'Failed to send message. Please try again.', { type: 'error' });
+      setCurrentProcessingSteps([]);
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -214,6 +293,11 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
                 : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100'
             }`}
           >
+            {/* Display processing steps if available */}
+            {message.processing_steps && message.processing_steps.length > 0 && (
+              <ProcessingSteps steps={message.processing_steps} />
+            )}
+            
             {message.type === 'confirmation' && message.sql_query ? (
               <div>
                 <p className="mb-3 whitespace-pre-wrap">{message.content.split('```')[0]}</p>
@@ -250,17 +334,6 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
                     <CheckCircle className="w-3 h-3" />
                     Execute
                   </button>
-                  {/* <button
-                    onClick={() => {
-                      const feedback = prompt('What would you like to change?');
-                      if (feedback) handleConfirmQuery(false, feedback);
-                    }}
-                    disabled={loading}
-                    className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded text-sm flex items-center gap-1"
-                  >
-                    <Edit className="w-3 h-3" />
-                    Modify
-                  </button> */}
                   <button
                     onClick={() => handleConfirmQuery(false)}
                     disabled={loading}
@@ -347,7 +420,21 @@ const ChatInterface = ({ onQueryExecute, sessionId, onSessionStart }) => {
         ) : (
           <>
             {messages.map(renderMessage)}
-            {loading && (
+            
+            {/* Show current processing steps while loading */}
+            {loading && currentProcessingSteps.length > 0 && (
+              <div className="flex gap-3 mb-4">
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="bg-gray-100 dark:bg-gray-700 rounded-lg px-4 py-2 max-w-[70%]">
+                  <ProcessingSteps steps={currentProcessingSteps} />
+                </div>
+              </div>
+            )}
+            
+            {/* Show simple loader if no steps */}
+            {loading && currentProcessingSteps.length === 0 && (
               <div className="flex gap-3 mb-4">
                 <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center">
                   <Bot className="w-4 h-4 text-blue-600 dark:text-blue-400" />
