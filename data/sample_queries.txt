@@ -1,0 +1,152 @@
+
+
+-- Sample queries to demonstrate the data
+Percentage change in profit vs percentage change in share price for all banks for all years, show result till 2 decimal points
+
+llama-3.1-8b-instant
+
+1. Show yearly profits for all banks in 2024 / Show yearly roe for all banks in 2024
+Which bank has the maximum yearly profit?
+
+2. Compare NIM trends across banks for 2023-2024 with loan_to_deposit_ratio with 2 decimal points
+Which bank has the maximum net interest margin in 2024.
+
+3. Analyze CASA ratios for funding stability for ENBD in 2024 and 2023
+Can you do the analysis on casa and deposits and provide your insights?
+
+4. Percentage change in profit vs percentage change in share price for all banks for all quarters, show result till 2 decimal points
+Which bank has the highest percent change in profit vs percent change in share price?
+
+        "Annual earnings for all banks in 2024",
+        "2024 yearly profit by bank",
+        "Get profit figures for banks in 2024",
+        "Show net profit for all banks in 2024"
+
+-- Query 1: Show Yearly profits for all banks in 2024
+SELECT 
+    bank,
+    quarter,
+    quarterly_profit,
+    ytd_profit,
+    rote
+FROM uae_banks_financial_data 
+WHERE year = 2024 
+ORDER BY bank, quarter;
+
+-- Query 2: Compare NIM trends across banks for 2023-2024 with loan_to_deposit_ratio with 2 decimal points
+SELECT 
+    bank,
+    year,
+    quarter,
+    nim,
+    deposits,
+    loans_advances,
+    ROUND((loans_advances/deposits)*100, 2) as loan_to_deposit_ratio
+FROM uae_banks_financial_data 
+WHERE year IN (2023, 2024)
+ORDER BY bank, year, quarter;
+
+-- Query 3: Show asset quality metrics (NPL, CoR, Stage 3 Coverage) of all banks
+SELECT 
+    bank,
+    year,
+    quarter,
+    npl_ratio,
+    cor,
+    stage3_cover,
+    cost_income
+FROM uae_banks_financial_data 
+WHERE year = 2024 AND quarter = 4
+ORDER BY npl_ratio;
+
+-- Query 4: Market capitalization comparison for Q4 2024
+SELECT 
+    bank,
+    share_price,
+    market_cap_aed_bn,
+    market_cap_usd_bn,
+    rote,
+    cet1
+FROM uae_banks_financial_data 
+WHERE year = 2024 AND quarter = 4
+ORDER BY market_cap_aed_bn DESC;
+
+-- Query 5: Growth analysis - YoY profit growth for 2024 vs 2023
+SELECT 
+    a.bank,
+    a.ytd_profit as profit_2024,
+    b.ytd_profit as profit_2023,
+    ROUND(((a.ytd_profit - b.ytd_profit) / b.ytd_profit) * 100, 2) as yoy_growth_percent
+FROM uae_banks_financial_data a
+JOIN uae_banks_financial_data b ON a.bank = b.bank
+WHERE a.year = 2024 AND a.quarter = 4
+  AND b.year = 2023 AND b.quarter = 4
+ORDER BY yoy_growth_percent DESC;
+
+
+-- Query 6: Quarterly trend analysis for Emirates NBD
+SELECT 
+    year,
+    quarter,
+    CONCAT(year, '-Q', quarter) as period,
+    quarterly_profit,
+    nim,
+    cost_income,
+    rote,
+    cet1
+FROM uae_banks_financial_data 
+WHERE bank = 'ENBD' AND year >= 2023
+ORDER BY year, quarter;
+
+-- Query 7: Average metrics by bank for 2024
+SELECT 
+    bank,
+    ROUND(AVG(nim), 2) as avg_nim,
+    ROUND(AVG(cost_income), 2) as avg_cost_income,
+    ROUND(AVG(rote), 2) as avg_rote,
+    ROUND(AVG(npl_ratio), 2) as avg_npl_ratio,
+    ROUND(MAX(loans_advances), 0) as max_loans_advances,
+    ROUND(MAX(deposits), 0) as max_deposits
+FROM uae_banks_financial_data 
+WHERE year = 2024
+GROUP BY bank
+ORDER BY avg_rote DESC;
+
+-- Query 8: Top performing banks by ROTE in Q4 2024
+SELECT 
+    RANK() OVER (ORDER BY rote DESC) as rank,
+    bank,
+    rote,
+    ytd_profit,
+    cet1,
+    npl_ratio
+FROM uae_banks_financial_data 
+WHERE year = 2024 AND quarter = 4;
+
+-- Query 9: Banks with improving asset quality (decreasing NPL ratio)
+SELECT 
+    bank,
+    '2023-Q4' as period,
+    npl_2023,
+    '2024-Q4' as period2,
+    npl_2024,
+    ROUND(npl_2024 - npl_2023, 2) as npl_change
+FROM (
+    SELECT 
+        bank,
+        MAX(CASE WHEN year = 2023 AND quarter = 4 THEN npl_ratio END) as npl_2023,
+        MAX(CASE WHEN year = 2024 AND quarter = 4 THEN npl_ratio END) as npl_2024
+    FROM uae_banks_financial_data 
+    GROUP BY bank
+) t
+WHERE npl_2024 < npl_2023
+ORDER BY npl_change;
+
+-- Query 10: Market cap concentration analysis
+SELECT 
+    bank,
+    market_cap_usd_bn,
+    ROUND((market_cap_usd_bn / SUM(market_cap_usd_bn) OVER()) * 100, 2) as market_share_percent
+FROM uae_banks_financial_data 
+WHERE year = 2024 AND quarter = 4
+ORDER BY market_cap_usd_bn DESC; 'Mashreq', 6380.4, 2985.4, 1499.8, 182450.6, 4.9, 212680.8, 102350.6, 37.8, 1.1, 0.35, 97.8, 25.8, 17.1, 34950.2, 204380.4, 75.80, 15.22, 4.14);
